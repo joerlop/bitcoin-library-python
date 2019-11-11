@@ -381,10 +381,24 @@ class S256Point(Point):
         R = u*G + v*self
 
         return R.x.num == sig.r
+    
+    def sec(self, compressed=True):
+        # returns sec format of given point - serializes the point so other
+        # nodes in network can understand it
+        if compressed:
+            if self.y.num % 2 == 0:
+                # if y is even, compressed sec begins with 02
+                return b'\x02' + self.x.num.to_bytes(32, 'big')
+            else:
+                # else it begins with 03
+                return b'\x03' + self.x.num.to_bytes(32, 'big')
+
+        return b'\x04' + self.x.num.to_bytes(32, 'big') + self.y.num.to_bytes(32, 'big')
 
 G = S256Point(
     0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798,
     0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8)
+
 
 class S256Test(TestCase):
 
@@ -422,6 +436,7 @@ class S256Test(TestCase):
         s = 0xc7207fee197d27c618aea621406f6bf5ef6fca38681d82b2f06fddbdce6feab6
         self.assertTrue(point.verify(z, Signature(r, s)))
 
+
 class Signature:
 
     def __init__(self, r, s):
@@ -430,6 +445,7 @@ class Signature:
 
     def __repr__(self):
         return f"Signature ({self.r}, {self.s})"
+
 
 class PrivateKey:
 
@@ -442,7 +458,7 @@ class PrivateKey:
         return self.secret.zfill(64)
     
     def sign(self, z):
-        k = randint(0, N)
+        k = self.deterministic_k(z)
         R = k * G
         r = R.x.num
         k_inv = pow(k, N-2, N)
@@ -473,3 +489,11 @@ class PrivateKey:
             k = hmac.new(k, v + b'\x00', s256).digest()
             v = hmac.new(k, v, s256).digest()
 
+
+class PrivateKeyTest(TestCase):
+
+    def test_sign(self):
+        pk = PrivateKey(randint(0, N))
+        z = randint(0, 2**256)
+        sig = pk.sign(z)
+        self.assertTrue(pk.point.verify(z, sig))
