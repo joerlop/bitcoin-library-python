@@ -360,3 +360,17 @@ class S256Point(Point):
     def __rmul__(self, coefficient):
         coef = coefficient % N  # <1>
         return super().__rmul__(coef)
+
+G = S256Point(
+    0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798,
+    0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8)
+
+class Signature:
+
+    def __init__(self, r, s):
+        self.r = r
+        self.s = s    
+
+    def __repr__(self):
+        return f"Signature ({self.r}, {self.s})"
+
