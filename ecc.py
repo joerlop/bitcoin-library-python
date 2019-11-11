@@ -332,15 +332,18 @@ A = 0
 B = 7
 P = 2**256 - 2**32 - 977
 N = 0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141
-
+G = S256Point(
+    0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798,
+    0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8)
 
 class S256Field(FieldElement):
-
+    
     def __init__(self, num, prime=None):
         super().__init__(num=num, prime=P)
 
     def __repr__(self):
         return '{:x}'.format(self.num).zfill(64)
+
 
 class S256Point(Point):
 
@@ -358,12 +361,18 @@ class S256Point(Point):
             return 'S256Point({}, {})'.format(self.x, self.y)
 
     def __rmul__(self, coefficient):
-        coef = coefficient % N  # <1>
+        coef = coefficient % N
         return super().__rmul__(coef)
+    
+    def verify(self, z, sig):
+        # for given point or public key(self), verifies a singature
+        s_inv = pow(sig.s, N-2, N)
+        u = z * s_inv % N
+        v = sig.r * s_inv % N
+        R = u*G + v*self
 
-G = S256Point(
-    0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798,
-    0x483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8)
+        return R.x.num == sig.r
+
 
 class Signature:
 
@@ -374,3 +383,5 @@ class Signature:
     def __repr__(self):
         return f"Signature ({self.r}, {self.s})"
 
+e = 12345
+z = int.from_bytes(hash256("Programming Bitcoin!"), "big")
