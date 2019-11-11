@@ -430,3 +430,25 @@ class Signature:
 
     def __repr__(self):
         return f"Signature ({self.r}, {self.s})"
+
+class PrivateKey:
+
+    def __init__(self, secret):
+        self.secret = secret
+        # public key
+        self.point = secret * G    
+    
+    def hex(self):
+        return self.secret.zfill(64)
+    
+    def sign(self, z):
+        k = randint(0, N)
+        R = k * G
+        r = R.x.num
+        k_inv = pow(k, N-2, N)
+        s = (z + r*self.secret) * k_inv % N
+        # Done for malleability reasons
+        if s > N/2:
+            s = N - s
+        return Signature(r, s)
+
