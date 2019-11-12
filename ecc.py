@@ -602,7 +602,3 @@ class PrivateKeyTest(TestCase):
         z = randint(0, 2**256)
         sig = pk.sign(z)
         self.assertTrue(pk.point.verify(z, sig))
-
-print(PrivateKey(5003).wif(True, True))
-print(PrivateKey(2021**5).wif(False, True))
-print(PrivateKey(0x54321deadbeef).wif(True, False))
