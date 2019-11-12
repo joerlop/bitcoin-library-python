@@ -417,14 +417,14 @@ class S256Point(Point):
         solution = right_side.sqrt()
         # if y is even
         if is_even:
-            # check if solution is y or p - y and set y accordingly
+            # check if solution is y or p - y and set y accordingly (page 76)
             if solution.num % 2 == 0:
                 y = solution
             else:
                 y = S256Field(P - solution.num)
         # if y is odd
         else:
-            # check if solution is y or p - y and set y acordingly
+            # check if solution is y or p - y and set y acordingly (page 76)
             if solution.num % 2 == 0:
                 y = S256Field(P - solution.num)
             else:
@@ -482,6 +482,24 @@ class Signature:
     def __repr__(self):
         return f"Signature ({self.r}, {self.s})"
 
+    # returns the signature in der format (page 79)
+    def der(self):
+    #     # convert r to binary, big endian
+        r_bin = self.r.to_bytes(32, 'big')
+    #     # strip zeros in front
+        r_bin = r_bin.lstrip(b'\x00')
+    #     # check if first byte >= 0x80, if it is prepend 0x00
+        if r_bin[0] >= 0x80:
+            r_bin = b'\x00' + r_bin
+        result = bytes([2, len(r_bin)]) + r_bin
+    #     # do the same with s
+        s_bin = self.s.to_bytes(32, 'big')
+        s_bin = s_bin.lstrip(b'\x00')
+        if s_bin[0] >= 0x80:
+            s_bin = b'\x00' + s_bin
+        result += bytes([2, len(s_bin)]) + s_bin
+        return bytes([0x30, len(result)]) + result
+
 
 class PrivateKey:
 
@@ -533,3 +551,8 @@ class PrivateKeyTest(TestCase):
         z = randint(0, 2**256)
         sig = pk.sign(z)
         self.assertTrue(pk.point.verify(z, sig))
+
+r = 0x37206a0610995c58074999cb9767b87af4c4978db68c06e8e6e81d282047a7c6
+s = 0x8ca63759c1157ebeaec0d03cecca119fc9a75bf8e6d0fa65c841c8e2738cdaec
+sig = Signature(r, s)
+print(sig.der().hex())
