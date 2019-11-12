@@ -435,13 +435,13 @@ class S256Point(Point):
     def hash160(self, compressed=True):
         return hash160(self.sec(compressed))
     
-    # returns the address string for the given point 
+    # returns the address string for the given point - page 83
     def address(self, compressed=True, testnet=False):
         # prefix depends on address being testnet or mainnet
         if testnet:
             prefix = b'\x6f'
         else:
-            prefix = b'\x6f'
+            prefix = b'\x00'
         # hash 160 of the sec format
         h160 = self.hash160(compressed)
         # combine prefix with hash 160 of sec
@@ -580,6 +580,19 @@ class PrivateKey:
                 return candidate
             k = hmac.new(k, v + b'\x00', s256).digest()
             v = hmac.new(k, v, s256).digest()
+    
+    # returns private key in WIF format - page 84
+    def wif(self, compressed=True, testnet=False):
+        secret_bytes = self.secret.to_bytes(32, 'big')
+        if testnet:
+            prefix = b'\xef'
+        else:
+            prefix = b'\x80'
+        if compressed:
+            suffix = b'\x01'
+        else:
+            suffix = b''
+        return encode_base58_checksum(prefix + secret_bytes + suffix)
 
 
 class PrivateKeyTest(TestCase):
@@ -589,5 +602,3 @@ class PrivateKeyTest(TestCase):
         z = randint(0, 2**256)
         sig = pk.sign(z)
         self.assertTrue(pk.point.verify(z, sig))
-
-
