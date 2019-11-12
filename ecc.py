@@ -573,17 +573,3 @@ class PrivateKeyTest(TestCase):
         self.assertTrue(pk.point.verify(z, sig))
 
 
-n2 = 'eff69ef2b1bd93a66ed5219add4fb51e11a840f404876325a1e8ffe0529a2c'
-n2_new = 0xeff69ef2b1bd93a66ed5219add4fb51e11a840f404876325a1e8ffe0529a2c
-
-n2_bin = bytes.fromhex(n2)
-n2_new_bin = n2_new.to_bytes(31, 'big')
-
-print(int.from_bytes(n2_bin, 'big'))
-print(int.from_bytes(n2_new_bin, 'big'))
-
-n2_58 = encode_base58(n2_bin)
-n2_new_58 = encode_base58(n2_new_bin)
-
-print(n2_58)
-print(n2_new_58)
