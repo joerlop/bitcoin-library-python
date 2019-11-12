@@ -353,11 +353,17 @@ class S256Field(FieldElement):
     def __repr__(self):
         return '{:x}'.format(self.num).zfill(64)
 
+    def sqrt(self):
+        # returns square root of a finite field element.
+        # useful for calculating y when receiving a compressed sec point.
+        return self**((P+1)//4)
+
 
 class S256Point(Point):
 
     def __init__(self, x, y, a=None, b=None):
-        a, b = S256Field(A), S256Field(B)
+        a, b = S256Field(A), S256Field(B) 
+        # if received x and y are integers, it converts them to S256Field(x) and S256Field(y)
         if type(x) == int:
             super().__init__(x=S256Field(x), y=S256Field(y), a=a, b=b)
         else:
@@ -383,7 +389,7 @@ class S256Point(Point):
         return R.x.num == sig.r
     
     def sec(self, compressed=True):
-        # returns sec format of given point - serializes the point so other
+        # returns binary version sec format of given point - serializes the point so other
         # nodes in network can understand it
         if compressed:
             if self.y.num % 2 == 0:
@@ -394,6 +400,36 @@ class S256Point(Point):
                 return b'\x03' + self.x.num.to_bytes(32, 'big')
 
         return b'\x04' + self.x.num.to_bytes(32, 'big') + self.y.num.to_bytes(32, 'big')
+
+    @classmethod
+    def parse(self, sec_bin):
+        # returns a Point object from an sec binary
+        if sec_bin[0] == 4:
+            x = int.from_bytes(sec_bin[1:33], 'big')
+            y = int.from_bytes(sec_bin[33:65], 'big')
+            return S256Point(x, y)
+        # variable that holds the evenness of y
+        is_even = sec_bin[0] == 2
+        x = S256Field(int.from_bytes(sec_bin[1:], 'big'))
+        # calculate right side of curve equation y**2 = x**3 + 7
+        right_side = x**3 + S256Field(B)
+        # solve for left side
+        solution = right_side.sqrt()
+        # if y is even
+        if is_even:
+            # check if solution is y or p - y and set y accordingly
+            if solution.num % 2 == 0:
+                y = solution
+            else:
+                y = S256Field(P - solution.num)
+        # if y is odd
+        else:
+            # check if solution is y or p - y and set y acordingly
+            if solution.num % 2 == 0:
+                y = S256Field(P - solution.num)
+            else:
+                y = solution
+        return S256Point(x, y)
 
 G = S256Point(
     0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798,
