@@ -22,7 +22,6 @@ def hash160(s):
 
 # receives a binary number s and returns its base58 encoded version
 def encode_base58(s):
-    print(s)
     count = 0
     for c in s: 
         if c == 0:
