@@ -1,6 +1,7 @@
 from random import randint
 from unittest import TestCase
-from helper import hash256, encode_base58, hash160, encode_base58_checksum
+from helper import hash256, encode_base58, hash160, encode_base58_checksum, little_endian_to_int, int_to_little_endian
+from io import BytesIO
 
 import hashlib
 import hmac
@@ -510,6 +511,32 @@ class S256Test(TestCase):
         self.assertEqual(point.sec(compressed=False), bytes.fromhex(uncompressed))
         self.assertEqual(point.sec(compressed=True), bytes.fromhex(compressed))
 
+    def test_address(self):
+        secret = 888**3
+        mainnet_address = '148dY81A9BmdpMhvYEVznrM45kWN32vSCN'
+        testnet_address = 'mieaqB68xDCtbUBYFoUNcmZNwk74xcBfTP'
+        point = secret * G
+        self.assertEqual(
+            point.address(compressed=True, testnet=False), mainnet_address)
+        self.assertEqual(
+            point.address(compressed=True, testnet=True), testnet_address)
+        secret = 321
+        mainnet_address = '1S6g2xBJSED7Qr9CYZib5f4PYVhHZiVfj'
+        testnet_address = 'mfx3y63A7TfTtXKkv7Y6QzsPFY6QCBCXiP'
+        point = secret * G
+        self.assertEqual(
+            point.address(compressed=False, testnet=False), mainnet_address)
+        self.assertEqual(
+            point.address(compressed=False, testnet=True), testnet_address)
+        secret = 4242424242
+        mainnet_address = '1226JSptcStqn4Yq9aAmNXdwdc2ixuH9nb'
+        testnet_address = 'mgY3bVusRUL6ZB2Ss999CSrGVbdRwVpM8s'
+        point = secret * G
+        self.assertEqual(
+            point.address(compressed=False, testnet=False), mainnet_address)
+        self.assertEqual(
+            point.address(compressed=False, testnet=True), testnet_address)
+
 
 class Signature:
 
@@ -522,21 +549,60 @@ class Signature:
 
     # returns the signature in der format (page 79)
     def der(self):
-    #     # convert r to binary, big endian
+        # convert r to binary, big endian
         r_bin = self.r.to_bytes(32, 'big')
-    #     # strip zeros in front
+        # strip zeros in front
         r_bin = r_bin.lstrip(b'\x00')
-    #     # check if first byte >= 0x80, if it is prepend 0x00
+        # check if first byte >= 0x80, if it is prepend 0x00
         if r_bin[0] >= 0x80:
             r_bin = b'\x00' + r_bin
         result = bytes([2, len(r_bin)]) + r_bin
-    #     # do the same with s
+        # do the same with s
         s_bin = self.s.to_bytes(32, 'big')
         s_bin = s_bin.lstrip(b'\x00')
         if s_bin[0] >= 0x80:
             s_bin = b'\x00' + s_bin
         result += bytes([2, len(s_bin)]) + s_bin
         return bytes([0x30, len(result)]) + result
+    
+    @classmethod
+    def parse(cls, signature_bin):
+        s = BytesIO(signature_bin)
+        compound = s.read(1)[0]
+        if compound != 0x30:
+            raise SyntaxError("Bad Signature")
+        length = s.read(1)[0]
+        if length + 2 != len(signature_bin):
+            raise SyntaxError("Bad Signature Length")
+        marker = s.read(1)[0]
+        if marker != 0x02:
+            raise SyntaxError("Bad Signature")
+        rlength = s.read(1)[0]
+        r = int.from_bytes(s.read(rlength), 'big')
+        marker = s.read(1)[0]
+        if marker != 0x02:
+            raise SyntaxError("Bad Signature")
+        slength = s.read(1)[0]
+        s = int.from_bytes(s.read(slength), 'big')
+        if len(signature_bin) != 6 + rlength + slength:
+            raise SyntaxError("Signature too long")
+        return cls(r, s)
+
+
+class SignatureTest(TestCase):
+
+    def test_der(self):
+        testcases = (
+            (1, 2),
+            (randint(0, 2**256), randint(0, 2**255)),
+            (randint(0, 2**256), randint(0, 2**255)),
+        )
+        for r, s in testcases:
+            sig = Signature(r, s)
+            der = sig.der()
+            sig2 = Signature.parse(der)
+            self.assertEqual(sig2.r, r)
+            self.assertEqual(sig2.s, s)
 
 
 class PrivateKey:
@@ -602,3 +668,26 @@ class PrivateKeyTest(TestCase):
         z = randint(0, 2**256)
         sig = pk.sign(z)
         self.assertTrue(pk.point.verify(z, sig))
+    
+    def test_wif(self):
+        pk = PrivateKey(2**256 - 2**199)
+        expected = 'L5oLkpV3aqBJ4BgssVAsax1iRa77G5CVYnv9adQ6Z87te7TyUdSC'
+        self.assertEqual(pk.wif(compressed=True, testnet=False), expected)
+        pk = PrivateKey(2**256 - 2**201)
+        expected = '93XfLeifX7Jx7n7ELGMAf1SUR6f9kgQs8Xke8WStMwUtrDucMzn'
+        self.assertEqual(pk.wif(compressed=False, testnet=True), expected)
+        pk = PrivateKey(0x0dba685b4511dbd3d368e5c4358a1277de9486447af7b3604a69b8d9d8b7889d)
+        expected = '5HvLFPDVgFZRK9cd4C5jcWki5Skz6fmKqi1GQJf5ZoMofid2Dty'
+        self.assertEqual(pk.wif(compressed=False, testnet=False), expected)
+        pk = PrivateKey(0x1cca23de92fd1862fb5b76e5f4f50eb082165e5191e116c18ed1a6b24be6a53f)
+        expected = 'cNYfWuhDpbNM1JWc3c6JTrtrFVxU4AGhUKgw5f93NP2QaBqmxKkg'
+        self.assertEqual(pk.wif(compressed=True, testnet=True), expected)
+
+
+"""
+How to generate an address:
+"""
+# passphrase = b'jonathanerlichloquesea123geryjj.erlich155@gmail.com'
+# secret = little_endian_to_int(hash256(passphrase))
+# pk = PrivateKey(secret)
+# print(pk.point.address(testnet=True))
