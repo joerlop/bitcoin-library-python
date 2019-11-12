@@ -1,6 +1,6 @@
 from random import randint
 from unittest import TestCase
-from helper import hash256, encode_base58
+from helper import hash256, encode_base58, hash160, encode_base58_checksum
 
 import hashlib
 import hmac
@@ -430,6 +430,24 @@ class S256Point(Point):
             else:
                 y = solution
         return S256Point(x, y)
+    
+    # returns the hash160 of the point's sec format
+    def hash160(self, compressed=True):
+        return hash160(self.sec(compressed))
+    
+    # returns the address string for the given point 
+    def address(self, compressed=True, testnet=False):
+        # prefix depends on address being testnet or mainnet
+        if testnet:
+            prefix = b'\x6f'
+        else:
+            prefix = b'\x6f'
+        # hash 160 of the sec format
+        h160 = self.hash160(compressed)
+        # combine prefix with hash 160 of sec
+        combined = prefix + h160
+        return encode_base58_checksum(combined)
+
 
 G = S256Point(
     0x79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798,
