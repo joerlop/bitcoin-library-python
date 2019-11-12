@@ -1,6 +1,6 @@
 from random import randint
 from unittest import TestCase
-from helper import hash256
+from helper import hash256, encode_base58
 
 import hashlib
 import hmac
@@ -572,7 +572,18 @@ class PrivateKeyTest(TestCase):
         sig = pk.sign(z)
         self.assertTrue(pk.point.verify(z, sig))
 
-r = 0x37206a0610995c58074999cb9767b87af4c4978db68c06e8e6e81d282047a7c6
-s = 0x8ca63759c1157ebeaec0d03cecca119fc9a75bf8e6d0fa65c841c8e2738cdaec
-sig = Signature(r, s)
-print(sig.der().hex())
+
+n2 = 'eff69ef2b1bd93a66ed5219add4fb51e11a840f404876325a1e8ffe0529a2c'
+n2_new = 0xeff69ef2b1bd93a66ed5219add4fb51e11a840f404876325a1e8ffe0529a2c
+
+n2_bin = bytes.fromhex(n2)
+n2_new_bin = n2_new.to_bytes(31, 'big')
+
+print(int.from_bytes(n2_bin, 'big'))
+print(int.from_bytes(n2_new_bin, 'big'))
+
+n2_58 = encode_base58(n2_bin)
+n2_new_58 = encode_base58(n2_new_bin)
+
+print(n2_58)
+print(n2_new_58)
