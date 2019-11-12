@@ -39,3 +39,9 @@ def encode_base58(s):
 # helper function necessary for address creation - page 83
 def encode_base58_checksum(b):
     return encode_base58(b + hash256(b)[:4])
+
+def little_endian_to_int(num_bin):
+    return int.from_bytes(num_bin, 'little')
+
+def int_to_little_endian(num, length):
+    return num.to_bytes(length, 'little')
