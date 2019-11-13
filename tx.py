@@ -122,6 +122,19 @@ class Tx:
         locktime = int_to_little_endian(self.locktime, 4)
         # return the concatenation of all the needed fields
         return version + num_inputs + inputs + num_outputs + outputs + locktime
+    
+    # returns the implied fee of the transaction in satoshis.
+    def fee(self):
+        total_input = 0
+        # loop over the inputs summing their values.
+        for tx_input in self.tx_inputs:
+            total_input += tx_input.value()
+        total_output = 0
+        # loop over the outputs summing their values.
+        for tx_output in self.tx_outputs:
+            total_output += tx_output.amount()
+        # fee equals total inputs - total outputs
+        return total_input - total_output
         
 # class that represents a transaction input - page 95
 class TxIn:
@@ -129,6 +142,7 @@ class TxIn:
     def __init__(self, prev_tx, prev_index, script_sig=None, sequence=0xffffffff):
         # prev_tx is the hash256 of the previous transaction contents. It's a bytes obj. - page 93
         self.prev_tx = prev_tx
+        # prev_index is the prev_tx's output index corresponding to this input.
         self.prev_index = prev_index
         self.script_sig = script_sig
         self.sequence = sequence
@@ -154,7 +168,7 @@ class TxIn:
         # get prev_index in byte format.
         prev_index = int_to_little_endian(self.prev_index, 4)
         # get script_sig in byte format.
-        script_sig = self.script_sig.seralize() 
+        script_sig = self.script_sig.seralize()
         # get sequence in byte_format.
         sequence = int_to_little_endian(self.sequence, 4)
         return prev_tx + prev_index + script_sig + sequence
