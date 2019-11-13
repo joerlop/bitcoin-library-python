@@ -162,6 +162,13 @@ class TxIn:
     # fetches previous transaction. Done to be able to check this tx's inputs (prev tx's outputs) amounts.
     def fetch_tx(self, testnet=False):
         return TxFetcher.fetch(self.prev_tx.hex(), testnet=testnet)
+    
+    # returns the value of this tx input.
+    def value(self, testnet=False):
+        # we fetch the previous transaction
+        tx = self.fetch_tx(testnet=testnet)
+        # we return the amount of the tx output at the given index = this tx's spendable amount.
+        return tx.tx_outputs[self.prev_index].amount
 
 # class that represents a transaction output
 class TxOut:
