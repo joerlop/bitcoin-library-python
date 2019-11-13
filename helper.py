@@ -62,3 +62,16 @@ def read_varint(stream):
     # else, the number is i
     else:
         return i
+
+# converts (encodes) an integer to a varint. Opposite of read_varint - page 92
+def encode_varint(i):
+    if i < 0xfd:
+        return bytes([i])
+    elif i < 0x10000:
+        return b'\xfd' + int_to_little_endian(i, 2)
+    elif i < 0x100000000:
+        return b'\xfe' + int_to_little_endian(i, 4)
+    elif i < 0x10000000000000000:
+        return b'\xff' + int_to_little_endian(i, 8)
+    else:
+        raise RuntimeError('integer too large: {}'.format(i))
