@@ -64,11 +64,35 @@ class Tx:
         locktime = little_endian_to_int(stream.read(4))
         # return a Tx object
         return cls(version, inputs, outputs, locktime, testnet)
-
+    
+    # returns the bytes serialization of the transaction
+    def serialize(self):
+        # version is 4 bytes, LE
+        version = int_to_little_endian(self.version, 4)
+        # number of inputs is a varint
+        num_inputs = encode_varint(len(self.tx_inputs))
+        # initialize inputs bytes concatenation
+        inputs = b''
+        for tx_input in self.tx_inputs:
+            # concatenate inputs serializations
+            inputs += tx_input.serialize()
+        # number of outputs is a varint
+        num_outputs = encode_varint(len(self.tx_outputs))
+        # initialize outputs bytes concatenation
+        outputs = b''
+        for tx_output in self.tx_outputs:
+            # concatenate outputs serializations
+            outputs += tx_output.seralize()
+        # locktime is 4 bytes, LE
+        locktime = int_to_little_endian(self.locktime, 4)
+        # return the concatenation of all the needed fields
+        return version + num_inputs + inputs + num_outputs + outputs + locktime
+        
 # class that represents a transaction input - page 95
 class TxIn:
 
     def __init__(self, prev_tx, prev_index, script_sig=None, sequence=0xffffffff):
+        # prev_tx is the hash256 of the previous transaction contents. It's a bytes obj. - page 93
         self.prev_tx = prev_tx
         self.prev_index = prev_index
         self.script_sig = script_sig
@@ -77,13 +101,13 @@ class TxIn:
    # receives a bytes stream, returns a TxIn object 
     @classmethod
     def parse(cls, stream):
-        # prev_tx is 32 bytes, little endian. Parsed this way because it's a hash.
+        # prev_tx is 32 bytes, little endian, interpreted as bytes.
         prev_tx = stream.read(32)[::-1]
-        # prev_index is 4 bytes, little endian.
+        # prev_index is 4 bytes, little endian, interpreted as integer.
         prev_index = little_endian_to_int(stream.read(4))
         # TODO:
         script_sig = Script.parse(stream)
-        # sequence is 4 bytes, little endian.
+        # sequence is 4 bytes, little endian, interpreted as integer.
         sequence = little_endian_to_int(stream.read(4))
         # returns an object of the same class.
         return cls(prev_tx, prev_index, script_sig, sequence)
@@ -105,7 +129,7 @@ class TxOut:
 
     def __init__(self, amount, script_pubkey):
         self.amount = amount
-        self.script_pubkey = #script_pubkey
+        self.script_pubkey = script_pubkey
     
     def __repr__(self):
         return f"{self.amount}:{self.script_pubkey}"
@@ -113,7 +137,7 @@ class TxOut:
     # receives a bytes stream, returns a TxOut object 
     @classmethod
     def parse(cls, stream):
-        # prev_tx is 32 bytes, little endian. Parsed this way because it's a hash.
+        # amount is 8 bytes, little endian. Parsed this way because it's a hash.
         amount = little_endian_to_int(stream.read(8))
         # TODO:
         script_pubkey = Script.parse(stream)

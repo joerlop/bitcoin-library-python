@@ -13,6 +13,7 @@ def run(test):
 
 def hash256(s):
     '''two rounds of sha256'''
+    # sha256 returns a SHA-256 hash object. The digest serializes it to byte format (bytes object).
     return hashlib.sha256(hashlib.sha256(s).digest()).digest()
 
 # helper function necessary for address creation - page 83
