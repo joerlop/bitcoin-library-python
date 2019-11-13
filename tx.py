@@ -42,7 +42,7 @@ class Tx:
     
     # receives a stream of bytes and returns a Tx object
     @classmethod
-    def parse(cls, stream):
+    def parse(cls, stream, testnet=False):
         # s.read(n) will return n bytes
         # version has 4 bytes, little-endian, interpret as int
         version = little_endian_to_int(stream.read(4)) 
@@ -60,6 +60,11 @@ class Tx:
         # loop num_outputs times to get all outputs from the stream. 
         for _ in num_outputs:
             outputs.append(TxOut.parse(stream))
+        # locktime is 4 bytes, little endian
+        locktime = little_endian_to_int(stream.read(4))
+        # return a Tx object
+        return cls(version, inputs, outputs, locktime, testnet)
+
 # class that represents a transaction input - page 95
 class TxIn:
 
@@ -82,14 +87,25 @@ class TxIn:
         sequence = little_endian_to_int(stream.read(4))
         # returns an object of the same class.
         return cls(prev_tx, prev_index, script_sig, sequence)
-
+    
+    # returns the bytes serialization from a TxIn object
+    def seralize(self):
+        # just need to reverse order of previous tx hash.
+        prev_tx = self.prev_tx[::-1]
+        # get prev_index in byte format.
+        prev_index = int_to_little_endian(self.prev_index, 4)
+        # get script_sig in byte format.
+        script_sig = self.script_sig.seralize() 
+        # get sequence in byte_format.
+        sequence = int_to_little_endian(self.sequence, 4)
+        return prev_tx + prev_index + script_sig + sequence
 
 # class that represents a transaction output
 class TxOut:
 
     def __init__(self, amount, script_pubkey):
         self.amount = amount
-        self.script_pubkey = script_pubkey
+        self.script_pubkey = #script_pubkey
     
     def __repr__(self):
         return f"{self.amount}:{self.script_pubkey}"
@@ -103,4 +119,10 @@ class TxOut:
         script_pubkey = Script.parse(stream)
         # returns an object of the same class.
         return cls(amount, script_pubkey)
-
+    
+    # returns the bytes serialization of a TxOut object
+    def serialize(self):
+        # get the amount in byte format.
+        amount = int_to_little_endian(self.amount, 8)
+        # get the script_pubkey in byte format.
+        script_pubkey = self.script_pubkey.seralize()
