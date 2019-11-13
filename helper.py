@@ -40,8 +40,25 @@ def encode_base58(s):
 def encode_base58_checksum(b):
     return encode_base58(b + hash256(b)[:4])
 
-def little_endian_to_int(num_bin):
-    return int.from_bytes(num_bin, 'little')
+def little_endian_to_int(num_bytes):
+    return int.from_bytes(num_bytes, 'little')
 
 def int_to_little_endian(num, length):
     return num.to_bytes(length, 'little')
+
+# reads a varint (variable integer) from a stream - page 92
+def read_varint(stream):
+    # i could be a prefix or an integer. If it's a prefix, it will indicate how big the number is. Else, it is the number.
+    i = stream.read(1)[0]
+    # if i is 0xfd, next two bytes are the number
+    if i == 0xfd:
+        return little_endian_to_int(stream.read(2))
+    # if i is 0xfe, next 4 bytes are the number
+    elif i == 0xfe:
+        return little_endian_to_int(stream.read(4))
+    # if i is 0xfe, next 8 bytes are the number
+    elif i == 0xff:
+        return little_endian_to_int(stream.read(8))
+    # else, the number is i
+    else:
+        return i
