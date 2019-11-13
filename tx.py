@@ -128,7 +128,7 @@ class Tx:
         total_input = 0
         # loop over the inputs summing their values.
         for tx_input in self.tx_inputs:
-            total_input += tx_input.value()
+            total_input += tx_input.value(self.testnet)
         total_output = 0
         # loop over the outputs summing their values.
         for tx_output in self.tx_outputs:
