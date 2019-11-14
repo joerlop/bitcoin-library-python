@@ -104,3 +104,54 @@ class Script:
     # to evaluate the 2 together, we take the commands from the ScriptSig and ScriptPubKey and combine them.
     def __add__(self, other):
         return Script(self.cmds + other.cmds)
+    
+    # z is the signature (scriptsig)
+    def evaluate(self, z):
+        # get a copy of the commands array.
+        cmds = self.cmds.copy()
+        stack = []
+        altstack = []
+        # execute until commands array is empty.
+        while len(cmds) > 0:
+            cmd = cmds.pop()
+            # if command is an opcode.
+            if type(cmd) == int:
+                # get the function that executes the opcode from the OP_CODE_FUNCTIONS array.
+                operation = OP_CODE_FUNCTIONS[cmd]
+                # 99 and 100 are OP_IF and OP_NOTIF. They require manipulations of the cmds array based on 
+                # the top element of the stack.
+                if cmd in (99, 100):
+                    # if executing the opcode returns False (fails)
+                    if not operation(stack, cmds):
+                        LOGGER.info(f"bad op: {OP_CODE_NAMES[cmd]}")
+                        return False
+                # 107 and 108 are OP_TOALTSTACK and OP_FROMALTSTACK respectively. They move stack elements
+                # to an alternate stack (altstack)
+                elif cmd in (107, 108):
+                    # if executing the opcode returns False (fails)
+                    if not operation(stack, altstack):
+                        LOGGER.info(f"bad op: {OP_CODE_NAMES[cmd]}")
+                        return False
+                # 172, 173, 174 and 175 are OP_CHECKSIG, OP_CHECKSIGVERIFY, OP_CHECKMULTISIG and OP_CHECKMULTISIGVERIFY
+                # all require the signature hash z for validation.
+                elif cmd in (172, 173, 174, 175):
+                    # if executing the opcode returns False (fails)
+                    if not operation(stack, z):
+                        LOGGER.info(f"bad op: {OP_CODE_NAMES[cmd]}")
+                        return False
+                else:
+                    # if executing the opcode returns False (fails)
+                    if not operation(stack):
+                        LOGGER.info(f"bad op: {OP_CODE_NAMES[cmd]}")
+                        return False
+            # if cmd is not an opcode, it's an element. We push it to the stack.
+            else:
+                stack.append(cmd)
+        # if stack is empty after running all the commands, we fail the script returning False.
+        if len(stack) == 0:
+            return False
+        # if the stack's top element is an empty byte, which is how the stack stores a 0, we fail the script.
+        if stack.pop() == b'':
+            return False
+        # any other result means the script is valid.
+        return True
