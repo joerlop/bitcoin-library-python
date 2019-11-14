@@ -100,6 +100,12 @@ class Script:
                 result += cmd
         return result
     
+    # adds the length of the entire script to the beginning of the serialization as a varint.
+    def serialize(self):
+        result = self.raw_serialize()
+        length = len(result)
+        return encode_varint(length) + result
+    
     # to evaluate a script, we need to combine the ScriptPubKey (lockbox) and ScriptSig fields (unlocking password).
     # to evaluate the 2 together, we take the commands from the ScriptSig and ScriptPubKey and combine them.
     def __add__(self, other):
