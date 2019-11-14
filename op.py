@@ -228,3 +228,12 @@ def op_hash256(stack):
     stack.append(hash256(element))
     return True
 
+# consumes top element of the stack, performs a hash160 operation on it and pushes the hashed element
+# into the stack.
+def op_hash160(stack):
+    # if stack is empty, return False
+    if len(stack) < 1:
+        return False
+    element = stack.pop()
+    stack.append(hash160(element))
+    return True
