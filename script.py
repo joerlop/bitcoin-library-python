@@ -17,6 +17,7 @@ from op import (
 LOGGER = getLogger(__name__)
 
 
+# the Script object represents the command set that requires evaluation.
 class Script:
 
     def __init__(self, cmds=None):
@@ -98,3 +99,8 @@ class Script:
                 # we encode the cmd
                 result += cmd
         return result
+    
+    # to evaluate a script, we need to combine the ScriptPubKey (lockbox) and ScriptSig fields (unlocking password).
+    # to evaluate the 2 together, we take the commands from the ScriptSig and ScriptPubKey and combine them.
+    def __add__(self, other):
+        return Script(self.cmds + other.cmds)
