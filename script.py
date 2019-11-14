@@ -68,3 +68,33 @@ class Script:
         if count != length:
             raise SyntaxError('Parsing script failed.')
         return cls(cmds)
+    
+    # returns the serialization of the Script object.
+    def raw_serialize(self):
+        result = b''
+        for cmd in self.cmds:
+            # if it's an integer, we know it's an opcode because of the parse method. 
+            # Elements are pushed onto the stack as bytes.
+            if type(cmd) == int:
+                result += int_to_little_endian(cmd, 1)
+            else:
+                # number of bytes of the command.
+                length = len(cmd)
+                # if length <= 75, we encode the length of the element (cmd) as a single byte
+                if length <= 75:
+                    result += int_to_little_endian(length, 1)
+                # for any element with length between 76 and 255, we put a OP_PUSHDATA1 first,
+                # then encode the length as a single byte, followed by the element.
+                elif length > 75 and length < 256:                    
+                    result += int_to_little_endian(76, 1)
+                    result += int_to_little_endian(length, 1)
+                # for any element with length between 256 and 520, we put a OP_PUSHDATA2 first,
+                # then encode the length as 2 bytes, followed by the element.
+                elif length >= 256 and length <= 520:
+                    result += int_to_little_endian(77, 1)
+                    result += int_to_little_endian(length, 2)
+                else:
+                    raise ValueError('cmd is too long.')
+                # we encode the cmd
+                result += cmd
+        return result
