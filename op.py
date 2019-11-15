@@ -706,6 +706,19 @@ def op_max(stack):
         stack.append(encode_num(elem1))
     return True
 
+# Consumes top 3 elements. If third to top element is between second to top (min, inclusive) 
+# and top elements (max, not inclusive) pushes 1 onto the stack. 0 otherwise.
+def op_within(stack):
+    if len(stack) < 3:
+        return False
+    max_elem = decode_num(stack.pop())
+    min_elem = decode_num(stack.pop())
+    elem = decode_num(stack.pop())
+    if elem >= min_elem and elem < max_elem:
+        stack.append(encode_num(1))
+    else:
+        stack.append(encode_num(0))
+    return True
 
 class TestOp(TestCase):
 
@@ -930,6 +943,15 @@ class TestOp(TestCase):
         stack = [encode_num(10), encode_num(100)]
         op_max(stack)
         self.assertEqual(stack, [encode_num(100)])
+    
+    def test_op_within(self):
+        stack = [encode_num(5), encode_num(2), encode_num(10)]
+        op_within(stack)
+        self.assertEqual(stack, [encode_num(1)])
+
+        stack = [encode_num(5), encode_num(2), encode_num(5)]
+        op_within(stack)
+        self.assertEqual(stack, [encode_num(0)])
 
 
 OP_CODE_FUNCTIONS = {
@@ -997,7 +1019,7 @@ OP_CODE_FUNCTIONS = {
     162: op_greaterthanorequal,
     163: op_min,
     164: op_max,
-    # 165: op_within,
+    165: op_within,
     # 166: op_ripemd160,
     # 167: op_sha1,
     # 168: op_sha256,
