@@ -414,6 +414,24 @@ def op_2over(stack):
     print(stack)
     return True
 
+# The fifth and sixth items back are moved to the top of the stack.
+def op_2rot(stack):
+    if len(stack) < 6:
+        return False
+    # Pop sixth element and push it to top of stack.
+    stack.append(stack.pop(-6))
+    # Fifth element becomes sixth, pop it and push it to the stack.
+    stack.append(stack.pop(-6))
+    return True
+
+# Swaps the top two pairs of items.
+def op_2swap(stack):
+    if len(stack) < 4:
+        return False
+    stack.append(stack.pop(-4))
+    stack.append(stack.pop(-4))
+    return True
+
 
 class TestOp(TestCase):
 
@@ -421,6 +439,17 @@ class TestOp(TestCase):
         stack = [1, 2, 3, 4]
         op_2over(stack)
         self.assertEqual(stack, [1, 2, 3, 4, 1, 2])
+    
+    def test_op_2rot(self):
+        stack = [1, 2, 3, 4, 5, 6]
+        op_2rot(stack)
+        self.assertEqual(stack, [3, 4, 5, 6, 1, 2])
+    
+    def test_op_2swap(self):
+        stack = [1, 2, 3, 4]
+        op_2swap(stack)
+        self.assertEqual(stack, [3, 4, 1, 2])
+
 
 
 OP_CODE_FUNCTIONS = {
@@ -453,8 +482,8 @@ OP_CODE_FUNCTIONS = {
     110: op_2dup,
     111: op_3dup,
     112: op_2over,
-    # 113: op_2rot,
-    # 114: op_2swap,
+    113: op_2rot,
+    114: op_2swap,
     # 115: op_ifdup,
     # 116: op_depth,
     # 117: op_drop,
