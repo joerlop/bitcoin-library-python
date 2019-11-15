@@ -471,6 +471,11 @@ class TestOp(TestCase):
         stack = [1, 2, 3, 4]
         op_depth(stack)
         self.assertEqual(stack, [1, 2, 3, 4, encode_num(4)])
+    
+    def test_op_drop(self):
+        stack = [1, 2]
+        op_drop(stack)
+        self.assertEqual(stack, [1])
 
 
 
