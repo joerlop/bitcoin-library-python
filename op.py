@@ -428,8 +428,7 @@ def op_2rot(stack):
 def op_2swap(stack):
     if len(stack) < 4:
         return False
-    stack.append(stack.pop(-4))
-    stack.append(stack.pop(-4))
+    stack[-4:] = stack[-2:] + stack[-4:-2]
     return True
 
 
