@@ -352,6 +352,14 @@ def op_notif(stack, cmds):
         cmds[:0] = else_cmds
     return True
 
+# Marks transaction as invalid if top stack value is not true. The top stack value is removed.
+def op_verify(stack):
+    if len(stack) < 1:
+        return False
+    element = stack.pop()
+    if decode_num(element) == 0:
+        return False
+    return True
 
 
 OP_CODE_FUNCTIONS = {
@@ -376,7 +384,7 @@ OP_CODE_FUNCTIONS = {
     97: op_nop,
     99: op_if,
     100: op_notif,
-    # 105: op_verify,
+    105: op_verify,
     # 106: op_return,
     # 107: op_toaltstack,
     # 108: op_fromaltstack,
