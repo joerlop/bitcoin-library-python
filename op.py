@@ -387,6 +387,22 @@ def op_2drop(stack):
     stack.pop()
     return True
 
+# Duplicates the top two stack items.
+def op_2dup(stack):
+    if len(stack) < 2:
+        return False
+    elem1 = stack[-1]
+    elem2 = stack[-2]
+    stack.append(elem2)
+    stack.append(elem1)
+    return True
+
+# Duplicates the top three stack items.
+def op_3dup(stack):
+    if len(stack) < 3:
+        return False
+    stack.extend(stack[-3:])
+    return True
 
 
 OP_CODE_FUNCTIONS = {
@@ -416,8 +432,8 @@ OP_CODE_FUNCTIONS = {
     107: op_toaltstack,
     108: op_fromaltstack,
     109: op_2drop,
-    # 110: op_2dup,
-    # 111: op_3dup,
+    110: op_2dup,
+    111: op_3dup,
     # 112: op_2over,
     # 113: op_2rot,
     # 114: op_2swap,
