@@ -539,6 +539,14 @@ def op_negate(stack):
     stack.append(encode_num(-item))
     return True
 
+# The top element of the stack is made positive.
+def op_abs(stack):
+    if len(stack) < 1:
+        return False
+    item = decode_num(stack.pop())
+    stack.append(encode_num(abs(item)))
+    return True
+
 class TestOp(TestCase):
 
     def test_op_2over(self):
@@ -628,6 +636,15 @@ class TestOp(TestCase):
         stack = [encode_num(10)]
         op_negate(stack)
         self.assertEqual(stack, [encode_num(-10)])
+    
+    def test_op_abs(self):
+        stack = [encode_num(-10)]
+        op_abs(stack)
+        self.assertEqual(stack, [encode_num(10)])
+
+        stack = [encode_num(10)]
+        op_abs(stack)
+        self.assertEqual(stack, [encode_num(10)])
 
 OP_CODE_FUNCTIONS = {
     0: op_0,
@@ -678,7 +695,7 @@ OP_CODE_FUNCTIONS = {
     139: op_1add,
     140: op_1sub,
     143: op_negate,
-    # 144: op_abs,
+    144: op_abs,
     # 145: op_not,
     # 146: op_0notequal,
     147: op_add,
