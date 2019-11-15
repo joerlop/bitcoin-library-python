@@ -372,6 +372,22 @@ def op_toaltstack(stack, altstack):
     altstack.append(stack.pop())
     return True
 
+# Puts the input onto the top of the main stack. Removes it from the alt stack.
+def op_fromaltstack(stack, altstack):
+    if len(stack) < 1:
+        return False
+    stack.append(altstack.pop())
+    return True
+
+# Removes the top two stack items.
+def op_2drop(stack):
+    if len(stack) < 2:
+        return False
+    stack.pop()
+    stack.pop()
+    return True
+
+
 
 OP_CODE_FUNCTIONS = {
     0: op_0,
@@ -398,8 +414,8 @@ OP_CODE_FUNCTIONS = {
     105: op_verify,
     106: op_return,
     107: op_toaltstack,
-    # 108: op_fromaltstack,
-    # 109: op_2drop,
+    108: op_fromaltstack,
+    109: op_2drop,
     # 110: op_2dup,
     # 111: op_3dup,
     # 112: op_2over,
