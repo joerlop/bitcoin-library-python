@@ -483,6 +483,13 @@ def op_roll(stack):
         return False
     stack.append(stack.pop(-n-1)) 
 
+# The top three items on the stack are rotated to the left.
+def op_rot(stack):
+    if len(stack) < 3:
+        return False
+    stack.append(stack.pop(-3))
+    return True
+
 class TestOp(TestCase):
 
     def test_op_2over(self):
@@ -529,6 +536,11 @@ class TestOp(TestCase):
         stack = [1, 2, 3, 4, encode_num(3)]
         op_roll(stack)
         self.assertEqual(stack, [2, 3, 4, 1])
+    
+    def test_op_rot(self):
+        stack = [1, 2, 3]
+        op_rot(stack)
+        self.assertEqual(stack, [2, 3, 1])
 
 OP_CODE_FUNCTIONS = {
     0: op_0,
@@ -570,7 +582,7 @@ OP_CODE_FUNCTIONS = {
     120: op_over,
     121: op_pick,
     122: op_roll,
-    # 123: op_rot,
+    123: op_rot,
     # 124: op_swap,
     # 125: op_tuck,
     # 130: op_size,
