@@ -568,6 +568,17 @@ def op_0notequal(stack):
     else:
         stack.append(encode_num(1))
 
+# top element is subtracted from second-to-top stack element. Both elements are consumed. 
+# result is pushed onto the stack.
+def op_sub(stack):
+    if len(stack) < 2:
+        return False
+    elem1 = decode_num(stack.pop())
+    elem2 = decode_num(stack.pop())
+    result = elem2 - elem1
+    stack.append(encode_num(result))
+    return True
+
 class TestOp(TestCase):
 
     def test_op_2over(self):
@@ -685,6 +696,10 @@ class TestOp(TestCase):
         op_0notequal(stack)
         self.assertEqual(stack, [encode_num(1)])
 
+    def test_op_sub(self):
+        stack = [encode_num(10), encode_num(4)]
+        op_sub(stack)
+        self.assertEqual(stack, [encode_num(6)])
 
 OP_CODE_FUNCTIONS = {
     0: op_0,
@@ -739,7 +754,7 @@ OP_CODE_FUNCTIONS = {
     145: op_not,
     146: op_0notequal,
     147: op_add,
-    # 148: op_sub,
+    148: op_sub,
     # 154: op_booland,
     # 155: op_boolor,
     # 156: op_numequal,
