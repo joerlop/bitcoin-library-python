@@ -497,6 +497,24 @@ def op_swap(stack):
     stack.append(stack.pop(-2))
     return True
 
+# The item at the top of the stack is copied and inserted before the second-to-top item.
+def op_tuck(stack):
+    if len(stack) < 2:
+        return False
+    stack.insert(-2, stack[-1])
+    return True
+
+# Pushes the length of the top element of the stack (without popping it).
+def op_size(stack):
+    if len(stack) < 1:
+        return False
+    stack.append(encode_num(len(stack[-1])))
+    return True
+
+# Same as OP_EQUAL, but runs OP_VERIFY afterward.
+def op_equalverify(stack):
+    return op_equal(stack) and op_verify(stack)
+
 class TestOp(TestCase):
 
     def test_op_2over(self):
@@ -553,6 +571,16 @@ class TestOp(TestCase):
         stack = [1, 2, 3]
         op_swap(stack)
         self.assertEqual(stack, [1, 3, 2])
+    
+    def test_op_tuck(self):
+        stack = [1, 2]
+        op_tuck(stack)
+        self.assertEqual(stack, [2, 1, 2])
+    
+    def test_op_size(self):
+        stack = [encode_num(16)]
+        op_size(stack)
+        self.assertEqual(stack, [encode_num(16), encode_num(2)])
 
 OP_CODE_FUNCTIONS = {
     0: op_0,
@@ -596,10 +624,10 @@ OP_CODE_FUNCTIONS = {
     122: op_roll,
     123: op_rot,
     124: op_swap,
-    # 125: op_tuck,
-    # 130: op_size,
+    125: op_tuck,
+    130: op_size,
     135: op_equal,
-    # 136: op_equalverify,
+    136: op_equalverify,
     # 139: op_1add,
     # 140: op_1sub,
     # 143: op_negate,
