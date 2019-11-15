@@ -361,6 +361,17 @@ def op_verify(stack):
         return False
     return True
 
+# Marks transaction as invalid. 
+def op_return(stack):
+    return False
+
+# Removes top element from stack and pushes it into the altstack.
+def op_toaltstack(stack, altstack):
+    if len(stack) < 1:
+        return False
+    altstack.append(stack.pop())
+    return True
+
 
 OP_CODE_FUNCTIONS = {
     0: op_0,
@@ -385,8 +396,8 @@ OP_CODE_FUNCTIONS = {
     99: op_if,
     100: op_notif,
     105: op_verify,
-    # 106: op_return,
-    # 107: op_toaltstack,
+    106: op_return,
+    107: op_toaltstack,
     # 108: op_fromaltstack,
     # 109: op_2drop,
     # 110: op_2dup,
