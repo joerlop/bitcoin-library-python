@@ -618,6 +618,18 @@ def op_numequal(stack):
 def op_numequalverify(stack):
     return op_numequal(stack) and op_verify(stack)
 
+# consumes top 2 elements, if they are not equal, pushes a 1 onto the stack. Otherwise pushes a 0.
+def op_numnotequal(stack):
+    if len(stack) < 2:
+        return False
+    elem1 = decode_num(stack.pop())
+    elem2 = decode_num(stack.pop())
+    if elem1 != elem2:
+        stack.append(encode_num(1))
+    else:
+        stack.append(encode_num(0))
+    return True
+
 class TestOp(TestCase):
 
     def test_op_2over(self):
@@ -770,6 +782,15 @@ class TestOp(TestCase):
         stack = [encode_num(9), encode_num(10)]
         op_numequal(stack)
         self.assertEqual(stack, [encode_num(0)])
+    
+    def test_op_numnotequal(self):
+        stack = [encode_num(10), encode_num(10)]
+        op_numnotequal(stack)
+        self.assertEqual(stack, [encode_num(0)])
+
+        stack = [encode_num(9), encode_num(10)]
+        op_numnotequal(stack)
+        self.assertEqual(stack, [encode_num(1)])
 
 OP_CODE_FUNCTIONS = {
     0: op_0,
@@ -829,7 +850,7 @@ OP_CODE_FUNCTIONS = {
     155: op_boolor,
     156: op_numequal,
     157: op_numequalverify,
-    # 158: op_numnotequal,
+    158: op_numnotequal,
     # 159: op_lessthan,
     # 160: op_greaterthan,
     # 161: op_lessthanorequal,
