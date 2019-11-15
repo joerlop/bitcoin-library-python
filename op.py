@@ -450,6 +450,13 @@ def op_drop(stack):
     stack.pop()
     return True
 
+# Removes the second-to-top stack item.
+def op_nip(stack):
+    if len(stack) < 2:
+        return False
+    stack.pop(-2)
+    return True
+
 class TestOp(TestCase):
 
     def test_op_2over(self):
@@ -476,6 +483,11 @@ class TestOp(TestCase):
         stack = [1, 2]
         op_drop(stack)
         self.assertEqual(stack, [1])
+    
+    def test_op_nip(self):
+        stack = [1, 2, 3]
+        op_nip(stack)
+        self.assertEqual(stack, [1, 3])
 
 
 
@@ -515,7 +527,7 @@ OP_CODE_FUNCTIONS = {
     116: op_depth,
     117: op_drop,
     118: op_dup,
-    # 119: op_nip,
+    119: op_nip,
     # 120: op_over,
     # 121: op_pick,
     # 122: op_roll,
