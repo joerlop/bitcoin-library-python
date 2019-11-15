@@ -474,6 +474,14 @@ def op_pick(stack):
     stack.append(stack[-n-1])
     return True
 
+# The item n back in the stack is moved to the top.
+def op_roll(stack):
+    if len(stack) < 1:
+        return False
+    n = decode_num(stack.pop())
+    if len(stack) < n + 1:
+        return False
+    stack.append(stack.pop(-n-1)) 
 
 class TestOp(TestCase):
 
@@ -516,6 +524,11 @@ class TestOp(TestCase):
         stack = [1, 2, 3, 4, encode_num(3)]
         op_pick(stack)
         self.assertEqual(stack, [1, 2, 3, 4, 1])
+    
+    def test_op_roll(self):
+        stack = [1, 2, 3, 4, encode_num(3)]
+        op_roll(stack)
+        self.assertEqual(stack, [2, 3, 4, 1])
 
 OP_CODE_FUNCTIONS = {
     0: op_0,
@@ -556,7 +569,7 @@ OP_CODE_FUNCTIONS = {
     119: op_nip,
     120: op_over,
     121: op_pick,
-    # 122: op_roll,
+    122: op_roll,
     # 123: op_rot,
     # 124: op_swap,
     # 125: op_tuck,
