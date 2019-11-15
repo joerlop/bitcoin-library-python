@@ -547,7 +547,8 @@ def op_abs(stack):
     stack.append(encode_num(abs(item)))
     return True
 
-# Top element is removed. If top element is 0, a 1 is pushed onto the stack, otherwise a 0 is pushed onto the stack.
+# Top element is removed. If top element is 0, a 1 is pushed onto the stack, 
+# otherwise a 0 is pushed onto the stack.
 def op_not(stack):
     if len(stack) < 1:
         return False
@@ -556,6 +557,16 @@ def op_not(stack):
         stack.append(encode_num(1))
     else:
         stack.append(encode_num(0))
+
+# Removes top element. If it is 0, a 0 is added onto the stack, otherwise a 1 is pushed onto the stack.
+def op_0notequal(stack):
+    if len(stack) < 1:
+        return False
+    item = decode_num(stack.pop())
+    if item == 0:
+        stack.append(encode_num(0))
+    else:
+        stack.append(encode_num(1))
 
 class TestOp(TestCase):
 
@@ -664,6 +675,16 @@ class TestOp(TestCase):
         stack = [encode_num(2)]
         op_not(stack)
         self.assertEqual(stack, [encode_num(0)])
+    
+    def test_op_0notequal(self):
+        stack = [encode_num(0)]
+        op_0notequal(stack)
+        self.assertEqual(stack, [encode_num(0)])
+
+        stack = [encode_num(10)]
+        op_0notequal(stack)
+        self.assertEqual(stack, [encode_num(1)])
+
 
 OP_CODE_FUNCTIONS = {
     0: op_0,
@@ -716,7 +737,7 @@ OP_CODE_FUNCTIONS = {
     143: op_negate,
     144: op_abs,
     145: op_not,
-    # 146: op_0notequal,
+    146: op_0notequal,
     147: op_add,
     # 148: op_sub,
     # 154: op_booland,
