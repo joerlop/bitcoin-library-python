@@ -591,6 +591,19 @@ def op_booland(stack):
         stack.append(encode_num(0))
     return True
 
+# consumes top 2 elements, if one of them is not 0, push 1 onto the stack. Otherwise push 0.
+def op_boolor(stack):
+    if len(stack) < 2:
+        return False
+    elem1 = decode_num(stack.pop())
+    elem2 = decode_num(stack.pop())
+    if elem1 != 0 or elem2 != 0:
+        stack.append(encode_num(1))
+    else:
+        stack.append(encode_num(0))
+    return True
+
+
 class TestOp(TestCase):
 
     def test_op_2over(self):
@@ -721,6 +734,19 @@ class TestOp(TestCase):
         stack = [encode_num(0), encode_num(25)]
         op_booland(stack)
         self.assertEqual(stack, [encode_num(0)])
+    
+    def test_op_boolor(self):
+        stack = [encode_num(1), encode_num(25)]
+        op_boolor(stack)
+        self.assertEqual(stack, [encode_num(1)])
+
+        stack = [encode_num(0), encode_num(25)]
+        op_boolor(stack)
+        self.assertEqual(stack, [encode_num(1)])
+
+        stack = [encode_num(0), encode_num(0)]
+        op_boolor(stack)
+        self.assertEqual(stack, [encode_num(0)])
 
 OP_CODE_FUNCTIONS = {
     0: op_0,
@@ -777,7 +803,7 @@ OP_CODE_FUNCTIONS = {
     147: op_add,
     148: op_sub,
     154: op_booland,
-    # 155: op_boolor,
+    155: op_boolor,
     # 156: op_numequal,
     # 157: op_numequalverify,
     # 158: op_numnotequal,
