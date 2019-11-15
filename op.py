@@ -163,17 +163,18 @@ def op_nop(stack):
     return True
 
 # if the top stack value is not 0, the statements are executed. The top stack value is removed.
-# items is a list of commands that come from the script being evaluated (see evaluate method in Script class).
+# items is a list (array) of commands that come from the script being evaluated (see evaluate method in Script class).
 def op_if(stack, items):
-    # if there's nothing in the stack, return False
+    # if there's nothing in the stack, return False.
     if len(stack) < 1:
         return False
-    # go through and re-make the items array based on the top stack element
+    # go through and re-make the items array based on the top stack element.
     true_items = []
     false_items = []
     current_array = true_items
+    # boolean that indicates the if statement exited correctly.
     found = False
-    # number of endifs needed to exit the if.
+    # number of endifs needed to exit the if (we don't know where the if ends a priori).
     num_endifs_needed = 1
     while len(items) > 0:
         item = items.pop(0)
@@ -201,7 +202,7 @@ def op_if(stack, items):
         # for any other operation or element, add it to the if statement array.
         else:
             current_array.append(item)
-    # if items array is empty and we didn't exit the if statement, return False.
+    # if items array is empty and we didn't exit the if statement, fail.
     if not found:
         return False
     # get the top element from the stack
@@ -266,7 +267,16 @@ def op_checksig(stack, z):
     else:
         stack.append(encode_num(0))
     return True
-    
+
+def op_add(stack):
+    # if stack has less than 2 elements, return False
+    if len(stack) < 2:
+        return False
+    element_1 = decode_num(stack.pop())
+    element_2 = decode_num(stack.pop())
+    elem_sum = element_1 + element_2
+    stack.append(encode_num(elem_sum))
+    return True
 
 OP_CODE_FUNCTIONS = {
     0: op_0,
@@ -289,63 +299,63 @@ OP_CODE_FUNCTIONS = {
     96: op_16,
     97: op_nop,
     99: op_if,
-    100: op_notif,
-    105: op_verify,
-    106: op_return,
-    107: op_toaltstack,
-    108: op_fromaltstack,
-    109: op_2drop,
-    110: op_2dup,
-    111: op_3dup,
-    112: op_2over,
-    113: op_2rot,
-    114: op_2swap,
-    115: op_ifdup,
-    116: op_depth,
-    117: op_drop,
-    118: op_dup,
-    119: op_nip,
-    120: op_over,
-    121: op_pick,
-    122: op_roll,
-    123: op_rot,
-    124: op_swap,
-    125: op_tuck,
-    130: op_size,
+    # 100: op_notif,
+    # 105: op_verify,
+    # 106: op_return,
+    # 107: op_toaltstack,
+    # 108: op_fromaltstack,
+    # 109: op_2drop,
+    # 110: op_2dup,
+    # 111: op_3dup,
+    # 112: op_2over,
+    # 113: op_2rot,
+    # 114: op_2swap,
+    # 115: op_ifdup,
+    # 116: op_depth,
+    # 117: op_drop,
+    # 118: op_dup,
+    # 119: op_nip,
+    # 120: op_over,
+    # 121: op_pick,
+    # 122: op_roll,
+    # 123: op_rot,
+    # 124: op_swap,
+    # 125: op_tuck,
+    # 130: op_size,
     135: op_equal,
-    136: op_equalverify,
-    139: op_1add,
-    140: op_1sub,
-    143: op_negate,
-    144: op_abs,
-    145: op_not,
-    146: op_0notequal,
+    # 136: op_equalverify,
+    # 139: op_1add,
+    # 140: op_1sub,
+    # 143: op_negate,
+    # 144: op_abs,
+    # 145: op_not,
+    # 146: op_0notequal,
     147: op_add,
-    148: op_sub,
-    154: op_booland,
-    155: op_boolor,
-    156: op_numequal,
-    157: op_numequalverify,
-    158: op_numnotequal,
-    159: op_lessthan,
-    160: op_greaterthan,
-    161: op_lessthanorequal,
-    162: op_greaterthanorequal,
-    163: op_min,
-    164: op_max,
-    165: op_within,
-    166: op_ripemd160,
-    167: op_sha1,
-    168: op_sha256,
+    # 148: op_sub,
+    # 154: op_booland,
+    # 155: op_boolor,
+    # 156: op_numequal,
+    # 157: op_numequalverify,
+    # 158: op_numnotequal,
+    # 159: op_lessthan,
+    # 160: op_greaterthan,
+    # 161: op_lessthanorequal,
+    # 162: op_greaterthanorequal,
+    # 163: op_min,
+    # 164: op_max,
+    # 165: op_within,
+    # 166: op_ripemd160,
+    # 167: op_sha1,
+    # 168: op_sha256,
     169: op_hash160,
     170: op_hash256,
     172: op_checksig,
-    173: op_checksigverify,
-    174: op_checkmultisig,
-    175: op_checkmultisigverify,
+    # 173: op_checksigverify,
+    # 174: op_checkmultisig,
+    # 175: op_checkmultisigverify,
     176: op_nop,
-    177: op_checklocktimeverify,
-    178: op_checksequenceverify,
+    # 177: op_checklocktimeverify,
+    # 178: op_checksequenceverify,
     179: op_nop,
     180: op_nop,
     181: op_nop,

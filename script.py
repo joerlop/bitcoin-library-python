@@ -161,3 +161,6 @@ class Script:
             return False
         # any other result means the script is valid.
         return True
+
+s = Script([99, 118, 147, 86, 135])
+print(s.evaluate(81))
