@@ -1,10 +1,14 @@
 import hashlib
 import math
+from ecc import S256Point, Signature
+from logging import getLogger
 
 from helper import (
     hash160,
     hash256,
 )
+
+LOGGER = getLogger(__name__)
 
 # encodes num = converts num to byte format, LE.
 def encode_num(num):
@@ -237,6 +241,31 @@ def op_hash160(stack):
     element = stack.pop()
     stack.append(hash160(element))
     return True
+
+# consumes 2 stack elements (pubkey and signature) and determines if they are valid for this transaction. 
+# OP_CHECKSIG will push a 1 to the stack if they are valid. 0 otherwise - page 112
+def op_checksig(stack, z):
+    # if stack is has less than 2 elements, fail.
+    if len(stack) < 2:
+        return False
+    # sec_pubkey is the top element of stack.
+    sec_pubkey = stack.pop()
+    # take off the last byte of the signature as that's the hash_type.
+    der_signature = stack.pop()[:-1]
+    try:
+        point = S256Point.parse(sec_pubkey)
+        sig = Signature.parse(der_signature)
+        valid = point.verify(z, sig)
+    except (ValueError, SyntaxError) as e:
+        LOGGER.info(e)
+        return False
+    # push a 1 if it's valid, 0 otherwise.
+    if valid:
+        stack.append(encode_num(1))
+    else:
+        stack.append(encode_num(0))
+    return True
+    
 
 OP_CODE_FUNCTIONS = {
     0: op_0,
