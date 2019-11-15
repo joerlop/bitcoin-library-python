@@ -418,10 +418,7 @@ def op_2over(stack):
 def op_2rot(stack):
     if len(stack) < 6:
         return False
-    # Pop sixth element and push it to top of stack.
-    stack.append(stack.pop(-6))
-    # Fifth element becomes sixth, pop it and push it to the stack.
-    stack.append(stack.pop(-6))
+    stack[-6:] = stack[-4:] + stack[-6:-4]
     return True
 
 # Swaps the top two pairs of items.
@@ -431,6 +428,27 @@ def op_2swap(stack):
     stack[-4:] = stack[-2:] + stack[-4:-2]
     return True
 
+# If the top stack value is not 0, duplicate it.
+def op_ifdup(stack):
+    if len(stack) < 1:
+        return False
+    item = stack[-1]
+    if decode_num(item) != 0:
+        stack.append(item)
+    return True
+
+# Puts the number of stack items onto the stack.
+def op_depth(stack):
+    encoded_length = encode_num(len(stack))
+    stack.append(encoded_length)
+    return True
+
+# Removes the top stack item.
+def op_drop(stack):
+    if len(stack) < 1:
+        return False
+    stack.pop()
+    return True
 
 class TestOp(TestCase):
 
@@ -448,6 +466,11 @@ class TestOp(TestCase):
         stack = [1, 2, 3, 4]
         op_2swap(stack)
         self.assertEqual(stack, [3, 4, 1, 2])
+    
+    def test_op_depth(self):
+        stack = [1, 2, 3, 4]
+        op_depth(stack)
+        self.assertEqual(stack, [1, 2, 3, 4, encode_num(4)])
 
 
 
@@ -483,9 +506,9 @@ OP_CODE_FUNCTIONS = {
     112: op_2over,
     113: op_2rot,
     114: op_2swap,
-    # 115: op_ifdup,
-    # 116: op_depth,
-    # 117: op_drop,
+    115: op_ifdup,
+    116: op_depth,
+    117: op_drop,
     118: op_dup,
     # 119: op_nip,
     # 120: op_over,
