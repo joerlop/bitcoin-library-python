@@ -457,6 +457,14 @@ def op_nip(stack):
     stack.pop(-2)
     return True
 
+# Copies the second-to-top stack item to the top.
+def op_over(stack):
+    if len(stack) < 2:
+        return False
+    stack.append(stack[-2])
+    return True
+
+
 class TestOp(TestCase):
 
     def test_op_2over(self):
@@ -488,8 +496,11 @@ class TestOp(TestCase):
         stack = [1, 2, 3]
         op_nip(stack)
         self.assertEqual(stack, [1, 3])
-
-
+    
+    def test_op_over(self):
+        stack = [1, 2, 3]
+        op_over(stack)
+        self.assertEqual(stack, [1, 2, 3, 2])
 
 OP_CODE_FUNCTIONS = {
     0: op_0,
@@ -528,7 +539,7 @@ OP_CODE_FUNCTIONS = {
     117: op_drop,
     118: op_dup,
     119: op_nip,
-    # 120: op_over,
+    120: op_over,
     # 121: op_pick,
     # 122: op_roll,
     # 123: op_rot,
