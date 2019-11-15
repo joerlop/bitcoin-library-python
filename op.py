@@ -3,6 +3,8 @@ import math
 from ecc import S256Point, Signature
 from logging import getLogger
 
+from unittest import TestCase
+
 from helper import (
     hash160,
     hash256,
@@ -404,6 +406,22 @@ def op_3dup(stack):
     stack.extend(stack[-3:])
     return True
 
+# Copies the pair of items two spaces back in the stack to the front.
+def op_2over(stack):
+    if len(stack) < 4:
+        return False
+    stack.extend(stack[-4:-2])
+    print(stack)
+    return True
+
+
+class TestOp(TestCase):
+
+    def test_op_2over(self):
+        stack = [1, 2, 3, 4]
+        op_2over(stack)
+        self.assertEqual(stack, [1, 2, 3, 4, 1, 2])
+
 
 OP_CODE_FUNCTIONS = {
     0: op_0,
@@ -434,7 +452,7 @@ OP_CODE_FUNCTIONS = {
     109: op_2drop,
     110: op_2dup,
     111: op_3dup,
-    # 112: op_2over,
+    112: op_2over,
     # 113: op_2rot,
     # 114: op_2swap,
     # 115: op_ifdup,
