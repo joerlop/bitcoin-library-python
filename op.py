@@ -490,6 +490,13 @@ def op_rot(stack):
     stack.append(stack.pop(-3))
     return True
 
+# The top two items on the stack are swapped.
+def op_swap(stack):
+    if len(stack) < 2:
+        return False
+    stack.append(stack.pop(-2))
+    return True
+
 class TestOp(TestCase):
 
     def test_op_2over(self):
@@ -542,6 +549,11 @@ class TestOp(TestCase):
         op_rot(stack)
         self.assertEqual(stack, [2, 3, 1])
 
+    def test_op_swap(self):
+        stack = [1, 2, 3]
+        op_swap(stack)
+        self.assertEqual(stack, [1, 3, 2])
+
 OP_CODE_FUNCTIONS = {
     0: op_0,
     79: op_1negate,
@@ -583,7 +595,7 @@ OP_CODE_FUNCTIONS = {
     121: op_pick,
     122: op_roll,
     123: op_rot,
-    # 124: op_swap,
+    124: op_swap,
     # 125: op_tuck,
     # 130: op_size,
     135: op_equal,
