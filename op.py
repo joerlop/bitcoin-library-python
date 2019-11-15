@@ -278,6 +278,21 @@ def op_add(stack):
     stack.append(encode_num(elem_sum))
     return True
 
+# pushes a 1 into the stack of the topmost 2 elements are equal. Else pushes a 0.
+def op_equal(stack):
+    # if stack has less than 2 elements, return False
+    if len(stack) < 2:
+        return False
+    element_1 = decode_num(stack.pop())
+    element_2 = decode_num(stack.pop())
+    equal = element_1 == element_2
+    if equal:
+        stack.append(encode_num(1))
+    else:
+        stack.append(encode_num(0))
+    return True
+
+
 OP_CODE_FUNCTIONS = {
     0: op_0,
     79: op_1negate,
