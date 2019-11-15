@@ -270,6 +270,7 @@ def op_checksig(stack, z):
         stack.append(encode_num(0))
     return True
 
+# consumes top 2 elements, adds them and pushes the result into the stack.
 def op_add(stack):
     # if stack has less than 2 elements, return False
     if len(stack) < 2:
@@ -280,23 +281,77 @@ def op_add(stack):
     stack.append(encode_num(elem_sum))
     return True
 
-# pushes a 1 into the stack of the topmost 2 elements are equal. Else pushes a 0.
+# consumes top 2 elements. pushes a 1 into the stack if the topmost 2 elements are equal. Else pushes a 0.
 def op_equal(stack):
     # if stack has less than 2 elements, return False
     if len(stack) < 2:
         return False
-    element_1 = decode_num(stack.pop())
-    element_2 = decode_num(stack.pop())
-    equal = element_1 == element_2
-    if equal:
+    element_1 = stack.pop()
+    element_2 = stack.pop()
+    if element_1 == element_2:
         stack.append(encode_num(1))
     else:
         stack.append(encode_num(0))
     return True
 
-# op_endif logic is incorporated in op_if function.
+# op_endif logic is incorporated in the op_if function.
 def op_endif(stack):
     return True
+
+# same as op_if, but statements are executed it top value is 0.
+def op_notif(stack, cmds):
+    # if there's nothing in the stack, return False.
+    if len(stack) < 1:
+        return False
+    # go through and re-make the items array based on the top stack element.
+    if_cmds = [] # will hold the commands for the IF statement.
+    else_cmds = [] # will hold the commands for the ELSE statement.
+    current_array = if_cmds
+    # boolean that indicates the if statement exited correctly.
+    found = False
+    # number of endifs needed to exit the if (we don't know where the if ends a priori).
+    num_endifs_needed = 1
+    while len(cmds) > 0:
+        cmd = cmds.pop(0)
+        # 99 and 100 are OP_IF and OP_NOTIF, so it would mean we have a nested loop.
+        if cmd in (99, 100):
+            # we increase the # of endifs needed to exit the if.
+            num_endifs_needed += 1
+            # add the OP_IF or OP_NOTIF to the if statement array.
+            current_array.append(cmd)
+        # 103 is OP_ELSE and if we only needed 1 endif, then we exit the if and get into the else statement. 
+        elif num_endifs_needed == 1 and cmd == 103:
+            # else statement items.
+            current_array = else_cmds
+        # 104 is and OP_ENDIF
+        elif cmd == 104:
+            # if we only needed 1 endif, exit the if statement.
+            if num_endifs_needed == 1:
+                found = True
+                break
+            else:
+                # else, subtract 1 to the endifs needed to exit the if statement.
+                num_endifs_needed -= 1
+                # add the OP_ENDIF to the if statement array.
+                current_array.append(cmd)
+        # for any other operation or element, add it to the if statement array.
+        else:
+            current_array.append(cmd)
+    # if items array is empty and we didn't exit the if statement, fail.
+    if not found:
+        return False
+    # get the top element from the stack
+    element = stack.pop()
+    # if top stack element is 0, if there's an OP_ELSE, OP_ELSE statements are executed, else, 
+    # nothing from the if statements gets appended back to items array to be executed.
+    if decode_num(element) == 0:
+        cmds[:0] = if_cmds
+    # else, they are executed. All statements between the IF and the END_IF are executed, 
+    # excluding statements from the OP_ELSE if there's an OP_ELSE.
+    else:
+        cmds[:0] = else_cmds
+    return True
+
 
 
 OP_CODE_FUNCTIONS = {
@@ -320,7 +375,7 @@ OP_CODE_FUNCTIONS = {
     96: op_16,
     97: op_nop,
     99: op_if,
-    # 100: op_notif,
+    100: op_notif,
     # 105: op_verify,
     # 106: op_return,
     # 107: op_toaltstack,
