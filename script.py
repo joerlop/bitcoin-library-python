@@ -119,7 +119,9 @@ class Script:
         altstack = []
         # execute until commands array is empty.
         while len(cmds) > 0:
-            cmd = cmds.pop()
+            print("cmds", cmds)
+            cmd = cmds.pop(0)
+            print(cmd)
             # if command is an opcode.
             if type(cmd) == int:
                 # get the function that executes the opcode from the OP_CODE_FUNCTIONS array.
@@ -162,5 +164,5 @@ class Script:
         # any other result means the script is valid.
         return True
 
-s = Script([99, 118, 147, 86, 135])
+s = Script([81, 99, 118, 147, 86, 135, 104])
 print(s.evaluate(81))
