@@ -615,6 +615,8 @@ def op_numequal(stack):
         stack.append(encode_num(0))
     return True
 
+def op_numequalverify(stack):
+    return op_numequal(stack) and op_verify(stack)
 
 class TestOp(TestCase):
 
@@ -826,7 +828,7 @@ OP_CODE_FUNCTIONS = {
     154: op_booland,
     155: op_boolor,
     156: op_numequal,
-    # 157: op_numequalverify,
+    157: op_numequalverify,
     # 158: op_numnotequal,
     # 159: op_lessthan,
     # 160: op_greaterthan,
