@@ -163,6 +163,7 @@ def op_nop(stack):
     return True
 
 # if the top stack value is not 0, the statements are executed. The top stack value is removed.
+# items is a list of commands that come from the script being evaluated (see evaluate method in Script class).
 def op_if(stack, items):
     # if there's nothing in the stack, return False
     if len(stack) < 1:
