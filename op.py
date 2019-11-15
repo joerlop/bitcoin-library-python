@@ -682,6 +682,18 @@ def op_greaterthanorequal(stack):
         stack.append(encode_num(0))
     return True
 
+# Consumes top 2 elements. Pushes the smaller element between the two onto the stack.
+def op_min(stack):
+    if len(stack) < 2:
+        return False
+    elem1 = decode_num(stack.pop())
+    elem2 = decode_num(stack.pop())
+    if elem2 <= elem1:
+        stack.append(encode_num(elem2))
+    else:
+        stack.append(encode_num(elem1))
+    return True
+
 
 class TestOp(TestCase):
 
@@ -896,6 +908,11 @@ class TestOp(TestCase):
         stack = [encode_num(10), encode_num(2)]
         op_greaterthanorequal(stack)
         self.assertEqual(stack, [encode_num(1)])
+    
+    def test_op_min(self):
+        stack = [encode_num(10), encode_num(100)]
+        op_min(stack)
+        self.assertEqual(stack, [encode_num(10)])
 
 
 OP_CODE_FUNCTIONS = {
@@ -961,7 +978,7 @@ OP_CODE_FUNCTIONS = {
     160: op_greaterthan,
     161: op_lessthanorequal,
     162: op_greaterthanorequal,
-    # 163: op_min,
+    163: op_min,
     # 164: op_max,
     # 165: op_within,
     # 166: op_ripemd160,
