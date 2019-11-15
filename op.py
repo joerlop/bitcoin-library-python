@@ -505,15 +505,23 @@ def op_tuck(stack):
     return True
 
 # Pushes the string length of the top element of the stack (without popping it).
-# def op_size(stack):
-#     if len(stack) < 1:
-#         return False
-#     stack.append(encode_num(len(stack[-1])))
-#     return True
+def op_size(stack):
+    if len(stack) < 1:
+        return False
+    stack.append(encode_num(len(stack[-1])))
+    return True
 
 # Same as OP_EQUAL, but runs OP_VERIFY afterward.
 def op_equalverify(stack):
     return op_equal(stack) and op_verify(stack)
+
+# 1 is added to the top element of the stack.
+def op_1add(stack):
+    if len(stack) < 1:
+        return False
+    item = decode_num(stack.pop())
+    stack.append(encode_num(item + 1))
+    return True
 
 class TestOp(TestCase):
 
@@ -585,6 +593,11 @@ class TestOp(TestCase):
     def test_op_equalverify(self):
         stack = [1, 1]
         self.assertEqual(op_equalverify(stack), True)
+    
+    def test_op_1add(self):
+        stack = [encode_num(10)]
+        op_1add(stack)
+        self.assertEqual(stack, [encode_num(11)])
 
 
 OP_CODE_FUNCTIONS = {
@@ -630,10 +643,10 @@ OP_CODE_FUNCTIONS = {
     123: op_rot,
     124: op_swap,
     125: op_tuck,
-    # 130: op_size,
+    130: op_size,
     135: op_equal,
     136: op_equalverify,
-    # 139: op_1add,
+    139: op_1add,
     # 140: op_1sub,
     # 143: op_negate,
     # 144: op_abs,
