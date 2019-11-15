@@ -643,6 +643,19 @@ def op_lessthan(stack):
         stack.append(encode_num(0))
     return True
 
+# Consumes top 2 elements. Pushes a 1 onto the stack if second-to-top element
+# is less than top element. 0 otherwise.
+def op_greaterthan(stack):
+    if len(stack) < 2:
+        return False
+    elem1 = decode_num(stack.pop())
+    elem2 = decode_num(stack.pop())
+    if elem2 > elem1:
+        stack.append(encode_num(1))
+    else:
+        stack.append(encode_num(0))
+    return True
+
 
 class TestOp(TestCase):
 
@@ -818,6 +831,19 @@ class TestOp(TestCase):
         stack = [encode_num(10), encode_num(2)]
         op_lessthan(stack)
         self.assertEqual(stack, [encode_num(0)])
+    
+    def test_op_greaterthan(self):
+        stack = [encode_num(1), encode_num(2)]
+        op_greaterthan(stack)
+        self.assertEqual(stack, [encode_num(0)])
+
+        stack = [encode_num(2), encode_num(2)]
+        op_greaterthan(stack)
+        self.assertEqual(stack, [encode_num(0)])
+
+        stack = [encode_num(10), encode_num(2)]
+        op_greaterthan(stack)
+        self.assertEqual(stack, [encode_num(1)])
 
 OP_CODE_FUNCTIONS = {
     0: op_0,
@@ -879,7 +905,7 @@ OP_CODE_FUNCTIONS = {
     157: op_numequalverify,
     158: op_numnotequal,
     159: op_lessthan,
-    # 160: op_greaterthan,
+    160: op_greaterthan,
     # 161: op_lessthanorequal,
     # 162: op_greaterthanorequal,
     # 163: op_min,
