@@ -257,14 +257,18 @@ def op_checksig(stack, z):
     # sec_pubkey is the top element of stack.
     sec_pubkey = stack.pop()
     # take off the last byte of the signature as that's the hash_type.
+    # Signature format is [<DER signature> <1 byte hash-type>]. Hashtype value is last byte of the sig.
     der_signature = stack.pop()[:-1]
     try:
+        print("Hello")
         point = S256Point.parse(sec_pubkey)
         sig = Signature.parse(der_signature)
-        valid = point.verify(z, sig)
     except (ValueError, SyntaxError) as e:
+        print("Hello2")
         LOGGER.info(e)
         return False
+    valid = point.verify(z, sig)
+    print("valid", valid)
     # push a 1 if it's valid, 0 otherwise.
     if valid:
         stack.append(encode_num(1))
@@ -735,7 +739,7 @@ def op_sha1(stack):
     if len(stack) < 1:
         return False
     elem = stack.pop()
-    stack.append(hashlib.new('sha1', elem).digest())
+    stack.append(hashlib.sha1(elem).digest())
     return True
 
 # Consumes top element of the stack, performs a sha256 operation on it and pushes the hashed element
@@ -744,9 +748,14 @@ def op_sha256(stack):
     if len(stack) < 1:
         return False
     elem = stack.pop()
-    stack.append(hashlib.new('sha256', elem).digest())
+    # hashlib.new method receives as its parameter a bytes-like object and returns a SHA256 Hash Object.
+    # digest() converts the SHA256 object into bytes format.
+    stack.append(hashlib.sha256(elem).digest())
     return True
 
+# Same as OP_CHECKSIG, but OP_VERIFY is executed afterward.
+def op_checksigverify(stack, z):
+    return op_checksig(stack, z) and op_verify(stack)
 
 class TestOp(TestCase):
 
@@ -995,6 +1004,21 @@ class TestOp(TestCase):
         stack = [encode_num(1)]
         op_sha256(stack)
         self.assertEqual(stack, [hashlib.new('sha256', encode_num(1)).digest()])
+    
+    def test_op_checksig(self):
+        z = 0x7c076ff316692a3d7eb3c3bb0f8b1488cf72e1afcd929e29307032997a838a3d
+        sec = bytes.fromhex('04887387e452b8eacc4acfde10d9aaf7f6d9a0f975aabb10d006e4da568744d06c61de6d95231cd89026e286df3b6ae4a894a3378e393e93a0f45b666329a0ae34')
+        sig = bytes.fromhex('3045022000eff69ef2b1bd93a66ed5219add4fb51e11a840f404876325a1e8ffe0529a2c022100c7207fee197d27c618aea621406f6bf5ef6fca38681d82b2f06fddbdce6feab601')
+        stack = [sig, sec]
+        self.assertTrue(op_checksig(stack, z))
+        self.assertEqual(decode_num(stack[0]), 1)
+
+    def test_op_checksigverify(self):
+        z = 0x7c076ff316692a3d7eb3c3bb0f8b1488cf72e1afcd929e29307032997a838a3d
+        sec = bytes.fromhex('04887387e452b8eacc4acfde10d9aaf7f6d9a0f975aabb10d006e4da568744d06c61de6d95231cd89026e286df3b6ae4a894a3378e393e93a0f45b666329a0ae34')
+        sig = bytes.fromhex('3045022000eff69ef2b1bd93a66ed5219add4fb51e11a840f404876325a1e8ffe0529a2c022100c7207fee197d27c618aea621406f6bf5ef6fca38681d82b2f06fddbdce6feab601')
+        stack = [sig, sec]
+        self.assertTrue(op_checksigverify(stack, z))
 
 
 OP_CODE_FUNCTIONS = {
@@ -1069,7 +1093,7 @@ OP_CODE_FUNCTIONS = {
     169: op_hash160,
     170: op_hash256,
     172: op_checksig,
-    # 173: op_checksigverify,
+    173: op_checksigverify,
     # 174: op_checkmultisig,
     # 175: op_checkmultisigverify,
     176: op_nop,

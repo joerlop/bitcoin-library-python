@@ -390,7 +390,7 @@ class S256Point(Point):
         return R.x.num == sig.r
     
     def sec(self, compressed=True):
-        # returns binary version sec format of given point - serializes the point so other
+        # returns sec format of given point in bytes - serializes the point so other
         # nodes in network can understand it
         if compressed:
             if self.y.num % 2 == 0:
