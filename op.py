@@ -738,6 +738,15 @@ def op_sha1(stack):
     stack.append(hashlib.new('sha1', elem).digest())
     return True
 
+# Consumes top element of the stack, performs a sha256 operation on it and pushes the hashed element
+# into the stack.
+def op_sha256(stack):
+    if len(stack) < 1:
+        return False
+    elem = stack.pop()
+    stack.append(hashlib.new('sha256', elem).digest())
+    return True
+
 
 class TestOp(TestCase):
 
@@ -981,6 +990,11 @@ class TestOp(TestCase):
         stack = [encode_num(1)]
         op_sha1(stack)
         self.assertEqual(stack, [hashlib.new('sha1', encode_num(1)).digest()])
+    
+    def test_op_sha256(self):
+        stack = [encode_num(1)]
+        op_sha256(stack)
+        self.assertEqual(stack, [hashlib.new('sha256', encode_num(1)).digest()])
 
 
 OP_CODE_FUNCTIONS = {
@@ -1051,7 +1065,7 @@ OP_CODE_FUNCTIONS = {
     165: op_within,
     166: op_ripemd160,
     167: op_sha1,
-    # 168: op_sha256,
+    168: op_sha256,
     169: op_hash160,
     170: op_hash256,
     172: op_checksig,
