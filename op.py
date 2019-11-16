@@ -720,6 +720,16 @@ def op_within(stack):
         stack.append(encode_num(0))
     return True
 
+# Consumes top element of the stack, performs a ripemd160 operation on it and pushes the hashed element
+# into the stack.
+def op_ripemd160(stack):
+    if len(stack) < 1:
+        return False
+    elem = stack.pop()
+    stack.append(hashlib.new('ripemd160', elem).digest())
+    return True
+
+
 class TestOp(TestCase):
 
     def test_op_2over(self):
@@ -952,6 +962,11 @@ class TestOp(TestCase):
         stack = [encode_num(5), encode_num(2), encode_num(5)]
         op_within(stack)
         self.assertEqual(stack, [encode_num(0)])
+    
+    def test_op_ripemd160(self):
+        stack = [encode_num(1)]
+        op_ripemd160(stack)
+        self.assertEqual(stack, [hashlib.new('ripemd160', encode_num(1)).digest()])
 
 
 OP_CODE_FUNCTIONS = {
@@ -1020,7 +1035,7 @@ OP_CODE_FUNCTIONS = {
     163: op_min,
     164: op_max,
     165: op_within,
-    # 166: op_ripemd160,
+    166: op_ripemd160,
     # 167: op_sha1,
     # 168: op_sha256,
     169: op_hash160,
