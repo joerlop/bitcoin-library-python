@@ -112,7 +112,7 @@ class Script:
         return Script(self.cmds + other.cmds)
     
     # z is the signature (scriptsig)
-    def evaluate(self, z):
+    def evaluate(self, z, version=None, locktime=None, sequence=None):
         # get a copy of the commands array.
         cmds = self.cmds.copy()
         stack = []
@@ -147,6 +147,18 @@ class Script:
                     if not operation(stack, z):
                         LOGGER.info(f"bad op: {OP_CODE_NAMES[cmd]}")
                         return False
+                # 177 is OP_CHECKLOCKTIMEVERIFY. Requires locktime and sequence.
+                elif cmd == 177:
+                    # if executing the opcode returns False (fails)
+                    if not operation(stack, locktime, sequence):
+                        LOGGER.info(f"bad op: {OP_CODE_NAMES[cmd]}")
+                        return False
+                # 177 is OP_CHECKSEQUENCEVERIFY. Requires sequence and version.
+                elif cmd == 178:
+                    # if executing the opcode returns False (fails)
+                    if not operation(stack, version, sequence):
+                        LOGGER.info(f"bad op: {OP_CODE_NAMES[cmd]}")
+                        return False
                 else:
                     # if executing the opcode returns False (fails)
                     if not operation(stack):
@@ -163,6 +175,3 @@ class Script:
             return False
         # any other result means the script is valid.
         return True
-
-s = Script([81, 99, 118, 147, 86, 135, 104])
-print(s.evaluate(81))

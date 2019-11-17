@@ -260,15 +260,12 @@ def op_checksig(stack, z):
     # Signature format is [<DER signature> <1 byte hash-type>]. Hashtype value is last byte of the sig.
     der_signature = stack.pop()[:-1]
     try:
-        print("Hello")
         point = S256Point.parse(sec_pubkey)
         sig = Signature.parse(der_signature)
     except (ValueError, SyntaxError) as e:
-        print("Hello2")
         LOGGER.info(e)
         return False
     valid = point.verify(z, sig)
-    print("valid", valid)
     # push a 1 if it's valid, 0 otherwise.
     if valid:
         stack.append(encode_num(1))
@@ -415,7 +412,6 @@ def op_2over(stack):
     if len(stack) < 4:
         return False
     stack.extend(stack[-4:-2])
-    print(stack)
     return True
 
 # The fifth and sixth items back are moved to the top of the stack.
