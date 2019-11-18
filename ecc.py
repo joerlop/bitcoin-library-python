@@ -390,7 +390,7 @@ class S256Point(Point):
         return R.x.num == sig.r
     
     def sec(self, compressed=True):
-        # returns binary version sec format of given point - serializes the point so other
+        # returns sec format of given point in bytes - serializes the point so other
         # nodes in network can understand it
         if compressed:
             if self.y.num % 2 == 0:
@@ -404,7 +404,7 @@ class S256Point(Point):
 
     @classmethod
     def parse(self, sec_bin):
-        # returns a Point object from an sec binary
+        # returns a Point object from an sec in bytes format.
         if sec_bin[0] == 4:
             x = int.from_bytes(sec_bin[1:33], 'big')
             y = int.from_bytes(sec_bin[33:65], 'big')
