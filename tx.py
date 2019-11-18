@@ -15,6 +15,8 @@ from helper import (
     SIGHASH_ALL
 )
 
+from ecc import (PrivateKey)
+
 # class to be able to access the UTXO set end look up individual transactions and be able to get input amounts.
 class TxFetcher:
 
@@ -169,7 +171,7 @@ class Tx:
         # convert the result to an integer using int.from_bytes(x, 'big')
         return int.from_bytes(h256, 'big')
     
-    # Returns whether the input has a valid signature.
+    # Returns whether the input at the given index (in self.tx_inputs array) has a valid signature.
     def verify_input(self, input_index):
         # get the wanted input.
         tx_in = self.tx_inputs[input_index]
@@ -190,8 +192,28 @@ class Tx:
             if not self.verify_input(i):
                 return False
         return True
+    
+    # Generates the scriptsig for the input at the given index (in self.tx_inputs array) - page 141.
+    # Returns True if the scriptsig was generated correctly, False otherwise.
+    def sign_input(self, input_index, private_key):
+        # calculate z for the given input.
+        z = self.sig_hash(input_index)
+        # create a signature object for the private key and z.
+        sig_obj = private_key.sign(z)
+        # get the DER signature from the signature object.
+        der = sig_obj.der()
+        # add the hash type to the DER signature.
+        sig = der + SIGHASH_ALL.to_bytes(1, 'big')
+        # get the sec pubkey.
+        sec = private_key.point.sec()
+        # create the scriptsig, which is comprised of the sec pubkey and the signature.
+        script_sig = Script([sig, sec])
+        # add the ScriptSig to the given input.
+        self.tx_inputs[input_index].script_sig = script_sig
+        # verify the input was signed correctly.
+        return self.verify_input(input_index)
         
-# class that represents a transaction input - page 95
+# class that represents a transaction input - page 95.
 class TxIn:
 
     def __init__(self, prev_tx, prev_index, script_sig=None, sequence=0xffffffff):

@@ -563,6 +563,7 @@ class Signature:
         if s_bin[0] >= 0x80:
             s_bin = b'\x00' + s_bin
         result += bytes([2, len(s_bin)]) + s_bin
+        # returns the DER signature in bytes.
         return bytes([0x30, len(result)]) + result
     
     @classmethod
@@ -615,6 +616,7 @@ class PrivateKey:
     def hex(self):
         return self.secret.zfill(64)
     
+    # Returns a Signature object for the given z.
     def sign(self, z):
         k = self.deterministic_k(z)
         R = k * G
