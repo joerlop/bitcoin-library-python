@@ -21,7 +21,7 @@ def hash160(s):
     '''sha256 followed by ripemd160'''
     return hashlib.new('ripemd160', hashlib.sha256(s).digest()).digest()
 
-# receives a binary number s and returns its base58 encoded version
+# receives a number s in bytes format and returns a string as its base58 encoded version
 def encode_base58(s):
     count = 0
     for c in s: 
@@ -40,6 +40,26 @@ def encode_base58(s):
 # helper function necessary for address creation - page 83
 def encode_base58_checksum(b):
     return encode_base58(b + hash256(b)[:4])
+
+# Takes an address and returns its 20-byte hash version. Opposite of encode_base58 - Page 139.
+def decode_base58(s):
+    num = 0
+    # we get to the encoded version doing modulo 58 and then dividing the number by 58 until
+    # we get to a number igual to or less than 58. We reverse that in this loop.
+    for c in s:
+        num *= 58
+        # index method finds returns the index of c within the BASE58_ALPHABET string.
+        num += BASE58_ALPHABET.index(c)
+    # we convert the number to big endian bytes.
+    num_bytes = num.to_bytes(25, byteorder='big')
+    # we know that the checksum is the last 4 bytes.
+    checksum = num_bytes[-4:]
+    # we check that the checksum is correct.
+    if hash256(num_bytes[:-4])[:4] != checksum:
+        raise ValueError(f"bad address")
+    # the first byte is the network prefix (mainnet or testnet) and the last 4 are the checksum.
+    # The middle 20 are the 20_byte hash (the hash160).
+    return num_bytes[1:-4]
 
 def little_endian_to_int(num_bytes):
     return int.from_bytes(num_bytes, 'little')

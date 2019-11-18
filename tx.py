@@ -179,7 +179,17 @@ class Tx:
         combined_script = tx_in.script_sig + tx_in.script_pubkey(self.testnet)
         # evaluate them.
         return combined_script.evaluate(z)
-        
+    
+    # Returns whether this transaction is valid. page 135.
+    def verify(self):
+        # if tx is creating new bitcoins return False.
+        if self.fee() < 0:
+            return False
+        for i in range(len(self.tx_inputs)):
+            # check if every input has the correct scriptsig.
+            if not self.verify_input(i):
+                return False
+        return True
         
 # class that represents a transaction input - page 95
 class TxIn:
