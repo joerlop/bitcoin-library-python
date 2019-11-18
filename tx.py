@@ -7,10 +7,12 @@ import requests
 
 from helper import (
     hash256,
+    hash160,
     int_to_little_endian,
     little_endian_to_int,
     read_varint,
-    encode_varint
+    encode_varint,
+    SIGHASH_ALL
 )
 
 # class to be able to access the UTXO set end look up individual transactions and be able to get input amounts.
@@ -136,6 +138,37 @@ class Tx:
             total_output += tx_output.amount()
         # fee equals total inputs - total outputs
         return total_input - total_output
+    
+    # Returns the hash of the signature (z) for this transaction.
+    def sig_hash(self, input_index):
+        # we need to manually start serializing the tx.
+        result = int_to_little_endian(self.version, 4)
+        # add number of inputs.
+        result += encode_varint(len(self.tx_inputs))
+        # loop inputs and replace the input's scriptsig at given index with prev_tx's scriptpubkey
+        for i, tx_in in enumerate(self.tx_inputs):
+            if i == input_index:
+                # if this is the input I want to find the hash for, script_sig is prev_tx's scriptpubkey
+                script_sig = tx_in.script_pubkey(self.testnet)
+            else:
+                # if it's not the input we're looking for, script_sig is left empty.
+                script_sig = None
+            # add the serialization of the input
+            result += TxIn(tx_in.prev_tx, tx_in.prev_index, script_sig, tx_in.sequence)
+        # add the number of outputs as a varint.
+        result += encode_varint(len(self.tx_outputs))
+        # serialize each output.
+        for tx_out in self.tx_outputs:
+            result += tx_out.seralize()
+        # add locktime.
+        result += self.locktime
+        # add hash type in LE, 4 bytes.
+        result += int_to_little_endian(SIGHASH_ALL, 4)
+        # hash 256 the serialization.
+        h256 = hash256(result)
+        # convert the result to an integer using int.from_bytes(x, 'big')
+        return int.from_bytes(h256, 'big')
+        
         
 # class that represents a transaction input - page 95
 class TxIn:
@@ -231,27 +264,27 @@ class TxTest(TestCase):
         raw_tx = bytes.fromhex('0100000001813f79011acb80925dfe69b3def355fe914bd1d96a3f5f71bf8303c6a989c7d1000000006b483045022100ed81ff192e75a3fd2304004dcadb746fa5e24c5031ccfcf21320b0277457c98f02207a986d955c6e0cb35d446a89d3f56100f4d7f67801c31967743a9c8e10615bed01210349fc4e631e3624a545de3f89f5d8684c7b8138bd94bdd531d2e213bf016b278afeffffff02a135ef01000000001976a914bc3b654dca7e56b04dca18f2566cdaf02e8d9ada88ac99c39800000000001976a9141c4bc762dd5423e332166702cb75f40df79fea1288ac19430600')
         stream = BytesIO(raw_tx)
         tx = Tx.parse(stream)
-        self.assertEqual(len(tx.tx_ins), 1)
+        self.assertEqual(len(tx.tx_inputs), 1)
         want = bytes.fromhex('d1c789a9c60383bf715f3f6ad9d14b91fe55f3deb369fe5d9280cb1a01793f81')
-        self.assertEqual(tx.tx_ins[0].prev_tx, want)
-        self.assertEqual(tx.tx_ins[0].prev_index, 0)
+        self.assertEqual(tx.tx_inputs[0].prev_tx, want)
+        self.assertEqual(tx.tx_inputs[0].prev_index, 0)
         want = bytes.fromhex('6b483045022100ed81ff192e75a3fd2304004dcadb746fa5e24c5031ccfcf21320b0277457c98f02207a986d955c6e0cb35d446a89d3f56100f4d7f67801c31967743a9c8e10615bed01210349fc4e631e3624a545de3f89f5d8684c7b8138bd94bdd531d2e213bf016b278a')
-        self.assertEqual(tx.tx_ins[0].script_sig.serialize(), want)
-        self.assertEqual(tx.tx_ins[0].sequence, 0xfffffffe)
+        self.assertEqual(tx.tx_inputs[0].script_sig.serialize(), want)
+        self.assertEqual(tx.tx_inputs[0].sequence, 0xfffffffe)
 
     def test_parse_outputs(self):
         raw_tx = bytes.fromhex('0100000001813f79011acb80925dfe69b3def355fe914bd1d96a3f5f71bf8303c6a989c7d1000000006b483045022100ed81ff192e75a3fd2304004dcadb746fa5e24c5031ccfcf21320b0277457c98f02207a986d955c6e0cb35d446a89d3f56100f4d7f67801c31967743a9c8e10615bed01210349fc4e631e3624a545de3f89f5d8684c7b8138bd94bdd531d2e213bf016b278afeffffff02a135ef01000000001976a914bc3b654dca7e56b04dca18f2566cdaf02e8d9ada88ac99c39800000000001976a9141c4bc762dd5423e332166702cb75f40df79fea1288ac19430600')
         stream = BytesIO(raw_tx)
         tx = Tx.parse(stream)
-        self.assertEqual(len(tx.tx_outs), 2)
+        self.assertEqual(len(tx.tx_outputs), 2)
         want = 32454049
-        self.assertEqual(tx.tx_outs[0].amount, want)
+        self.assertEqual(tx.tx_outputs[0].amount, want)
         want = bytes.fromhex('1976a914bc3b654dca7e56b04dca18f2566cdaf02e8d9ada88ac')
-        self.assertEqual(tx.tx_outs[0].script_pubkey.serialize(), want)
+        self.assertEqual(tx.tx_outputs[0].script_pubkey.serialize(), want)
         want = 10011545
-        self.assertEqual(tx.tx_outs[1].amount, want)
+        self.assertEqual(tx.tx_outputs[1].amount, want)
         want = bytes.fromhex('1976a9141c4bc762dd5423e332166702cb75f40df79fea1288ac')
-        self.assertEqual(tx.tx_outs[1].script_pubkey.serialize(), want)
+        self.assertEqual(tx.tx_outputs[1].script_pubkey.serialize(), want)
 
     def test_parse_locktime(self):
         raw_tx = bytes.fromhex('0100000001813f79011acb80925dfe69b3def355fe914bd1d96a3f5f71bf8303c6a989c7d1000000006b483045022100ed81ff192e75a3fd2304004dcadb746fa5e24c5031ccfcf21320b0277457c98f02207a986d955c6e0cb35d446a89d3f56100f4d7f67801c31967743a9c8e10615bed01210349fc4e631e3624a545de3f89f5d8684c7b8138bd94bdd531d2e213bf016b278afeffffff02a135ef01000000001976a914bc3b654dca7e56b04dca18f2566cdaf02e8d9ada88ac99c39800000000001976a9141c4bc762dd5423e332166702cb75f40df79fea1288ac19430600')

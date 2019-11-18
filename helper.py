@@ -3,7 +3,7 @@ from unittest import TestSuite, TextTestRunner
 import hashlib
 
 BASE58_ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
-
+SIGHASH_ALL = 1
 
 def run(test):
     suite = TestSuite()
