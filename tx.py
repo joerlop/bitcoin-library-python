@@ -74,7 +74,7 @@ class Tx:
     
     # binary hash of the serialization in little endian 
     def hash(self):
-        return hash256(self.seralize())[::-1]
+        return hash256(self.serialize())[::-1]
     
     # receives a stream of bytes and returns a Tx object
     @classmethod
