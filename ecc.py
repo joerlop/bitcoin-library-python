@@ -381,7 +381,7 @@ class S256Point(Point):
         return super().__rmul__(coef)
     
     def verify(self, z, sig):
-        # for given point or public key(self), verifies a singature
+        # for given point or public key(self), verifies a signature
         s_inv = pow(sig.s, N-2, N)
         u = z * s_inv % N
         v = sig.r * s_inv % N

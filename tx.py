@@ -168,6 +168,17 @@ class Tx:
         h256 = hash256(result)
         # convert the result to an integer using int.from_bytes(x, 'big')
         return int.from_bytes(h256, 'big')
+    
+    # Returns whether the input has a valid signature.
+    def verify_input(self, input_index):
+        # get the wanted input.
+        tx_in = self.tx_inputs[input_index]
+        # compute the signature hash for input.
+        z = self.sig_hash(input_index)
+        # combine scripts.
+        combined_script = tx_in.script_sig + tx_in.script_pubkey(self.testnet)
+        # evaluate them.
+        return combined_script.evaluate(z)
         
         
 # class that represents a transaction input - page 95
