@@ -1,5 +1,6 @@
 from io import BytesIO
 from unittest import TestCase
+from script import Script
 
 import json
 import requests
