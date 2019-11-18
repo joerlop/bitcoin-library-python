@@ -52,6 +52,12 @@ class TxFetcher:
             cls.cache[tx_id] = tx
             cls.cache[tx_id].testnet = testnet
             return cls.cache[tx_id]
+    
+    @classmethod
+    def load_cache(cls, filename):
+        disk_cache = json.loads(open(filename, 'r').read())
+        for k, raw_hex in disk_cache.items():
+            cls.cache[k] = Tx.parse(BytesIO(bytes.fromhex(raw_hex)))
 
 # class that represents a Bitcoin transaction - page 88
 class Tx:
@@ -287,6 +293,7 @@ class TxOut:
         amount = int_to_little_endian(self.amount, 8)
         # get the script_pubkey in byte format.
         script_pubkey = self.script_pubkey.seralize()
+        return amount + script_pubkey
 
 
 class TxTest(TestCase):
