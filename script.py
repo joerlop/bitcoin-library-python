@@ -16,6 +16,9 @@ from op import (
 
 LOGGER = getLogger(__name__)
 
+# Takes the 20-byte hash160 part of the address and returns a p2pkh ScriptPubKey - page 140.
+def p2pkh_script(h160):
+    return Script([0x76, 0xa9, h160, 0x88, 0xac])
 
 # the Script object represents the command set that requires evaluation.
 class Script:
@@ -55,12 +58,12 @@ class Script:
                 # push the element into the stack.
                 cmds.append(s.read(n))
                 # update the count.
-                count += n
+                count += n + 1
             # 77 is OP_PUSHDATA2, so the next 2 bytes tell us how many bytes the next element is.
             elif current_byte_as_int == 77:
                 n = little_endian_to_int(s.read(2))
                 cmds.append(s.read(n))
-                count += n
+                count += n + 2
             # else we push the opcode onto the stack
             else:
                 op_code = current_byte_as_int
@@ -119,9 +122,7 @@ class Script:
         altstack = []
         # execute until commands array is empty.
         while len(cmds) > 0:
-            print("cmds", cmds)
             cmd = cmds.pop(0)
-            print(cmd)
             # if command is an opcode.
             if type(cmd) == int:
                 # get the function that executes the opcode from the OP_CODE_FUNCTIONS array.

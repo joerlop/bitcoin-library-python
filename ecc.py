@@ -381,7 +381,7 @@ class S256Point(Point):
         return super().__rmul__(coef)
     
     def verify(self, z, sig):
-        # for given point or public key(self), verifies a singature
+        # for given point or public key(self), verifies a signature
         s_inv = pow(sig.s, N-2, N)
         u = z * s_inv % N
         v = sig.r * s_inv % N
@@ -563,6 +563,7 @@ class Signature:
         if s_bin[0] >= 0x80:
             s_bin = b'\x00' + s_bin
         result += bytes([2, len(s_bin)]) + s_bin
+        # returns the DER signature in bytes.
         return bytes([0x30, len(result)]) + result
     
     @classmethod
@@ -608,6 +609,7 @@ class SignatureTest(TestCase):
 class PrivateKey:
 
     def __init__(self, secret):
+        # secret is an integer that represents the hash256 of the passphrase.
         self.secret = secret
         # public key
         self.point = secret * G    
@@ -615,6 +617,7 @@ class PrivateKey:
     def hex(self):
         return self.secret.zfill(64)
     
+    # Returns a Signature object for the given z.
     def sign(self, z):
         k = self.deterministic_k(z)
         R = k * G
@@ -683,11 +686,3 @@ class PrivateKeyTest(TestCase):
         expected = 'cNYfWuhDpbNM1JWc3c6JTrtrFVxU4AGhUKgw5f93NP2QaBqmxKkg'
         self.assertEqual(pk.wif(compressed=True, testnet=True), expected)
 
-
-"""
-How to generate an address:
-"""
-# passphrase = b'jonathanerlichloquesea123geryjj.erlich155@gmail.com'
-# secret = little_endian_to_int(hash256(passphrase))
-# pk = PrivateKey(secret)
-# print(pk.point.address(testnet=True))
