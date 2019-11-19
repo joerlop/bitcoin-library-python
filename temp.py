@@ -9,15 +9,17 @@ b.append(4)
 print(list_a)
 
 
-# How to generate an address:
+"""
+How to generate an address:
+"""
 passphrase = b'whatever'
 secret = little_endian_to_int(hash256(passphrase))
 pk = PrivateKey(secret)
 print(pk.point.address(testnet=True))
 
 """
-How to create a transaction:
-
+How to create a transaction with 1 input:
+"""
 output_address_1 = 'mkHS9ne12qx9pS9VojpwU5xtRd4T7X7ZUt'
 output_address_2 = 'mqdZtV16UixrjvkW5eQfpMiyspZYEoJSxV'
 # this tx will have only one input.
@@ -48,8 +50,11 @@ pk = PrivateKey(secret)
 print(tx.sign_input(0, pk))
 # finally we print the serialization of the tx.
 print(tx.serialize().hex())
-"""
 
+
+"""
+Creating a tx with multiple inputs.
+"""
 output_address = 'mqdZtV16UixrjvkW5eQfpMiyspZYEoJSxV'
 amount = int(0.019 * 100000000)
 # Build the tx_inputs array
@@ -67,7 +72,7 @@ tx_out = TxOut(amount, script_pubkey)
 tx_outputs = [tx_out]
 # Create the tx.
 transaction = Tx(1, tx_inputs, tx_outputs, 0, True)
-passphrase = b'jonathanerlichloquesea123geryjj.erlich155@gmail.com'
+passphrase = b'whatever'
 secret = little_endian_to_int(hash256(passphrase))
 pk = PrivateKey(secret)
 print(transaction.sign_input(0, pk))
