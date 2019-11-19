@@ -248,31 +248,6 @@ def op_hash160(stack):
     stack.append(hash160(element))
     return True
 
-# consumes 2 stack elements (pubkey and signature) and determines if they are valid for this transaction. 
-# OP_CHECKSIG will push a 1 to the stack if they are valid. 0 otherwise - page 112
-def op_checksig(stack, z):
-    # if stack is has less than 2 elements, fail.
-    if len(stack) < 2:
-        return False
-    # sec_pubkey is the top element of stack.
-    sec_pubkey = stack.pop()
-    # take off the last byte of the signature as that's the hash_type.
-    # Signature format is [<DER signature> <1 byte hash-type>]. Hashtype value is last byte of the sig.
-    der_signature = stack.pop()[:-1]
-    try:
-        point = S256Point.parse(sec_pubkey)
-        sig = Signature.parse(der_signature)
-    except (ValueError, SyntaxError) as e:
-        LOGGER.info(e)
-        return False
-    valid = point.verify(z, sig)
-    # push a 1 if it's valid, 0 otherwise.
-    if valid:
-        stack.append(encode_num(1))
-    else:
-        stack.append(encode_num(0))
-    return True
-
 # consumes top 2 elements, adds them and pushes the result into the stack.
 def op_add(stack):
     # if stack has less than 2 elements, return False
@@ -753,6 +728,85 @@ def op_sha256(stack):
 def op_checksigverify(stack, z):
     return op_checksig(stack, z) and op_verify(stack)
 
+# consumes 2 stack elements (pubkey and signature) and determines if they are valid for this transaction. 
+# OP_CHECKSIG will push a 1 to the stack if they are valid. 0 otherwise - page 112
+def op_checksig(stack, z):
+    # if stack is has less than 2 elements, fail.
+    if len(stack) < 2:
+        return False
+    # sec_pubkey is the top element of stack.
+    sec_pubkey = stack.pop()
+    # take off the last byte of the signature as that's the hash_type.
+    # Signature format is [<DER signature> <1 byte hash-type>]. Hashtype value is last byte of the sig.
+    der_signature = stack.pop()[:-1]
+    try:
+        point = S256Point.parse(sec_pubkey)
+        sig = Signature.parse(der_signature)
+    except (ValueError, SyntaxError) as e:
+        LOGGER.info(e)
+        return False
+    valid = point.verify(z, sig)
+    # push a 1 if it's valid, 0 otherwise.
+    if valid:
+        stack.append(encode_num(1))
+    else:
+        stack.append(encode_num(0))
+    return True
+
+# If all signatures are valid, 1 is returned, 0 otherwise. 
+# Due to a bug, one extra unused value is removed from the stack - page 148.
+def op_checkmultisig(stack, z): 
+    if len(stack) < 1:
+        return False
+    # n is the number of public keys
+    n = stack.pop()
+    if len(stack) < n + 1:
+        return False
+    # get all the public keys into a list.
+    pubkeys = []
+    for _ in range(n):
+        pubkeys.append(stack.pop())
+    if len(stack) < 1:
+        return False
+    # m is the number of signatures
+    m = stack.pop()
+    # m + 2 because of the additional element at the bottom of the stack that is added.
+    if len(stack) < m + 1:
+        return False
+    # get all the signatures.
+    signatures = []
+    for _ in range(m):
+        # take off last byte, which is the hashtype
+        signatures.append(stack.pop()[:-1])
+    if len(stack) < 1:
+        return False
+    # we remove the last element from the stack (the one included because the off by one error)
+    stack.pop()
+    # verify all the signatures against all pubkeys. If a signature isn't valid for any pubkeys, fail.
+    for signature in signatures:
+        valid = False
+        for pubkey in pubkeys:
+            try:
+                point = S256Point.parse(pubkey)
+                sig = Signature.parse(signature)
+            except (ValueError, SyntaxError) as e:
+                LOGGER.info(e)
+                return False
+            # verify the current signature for the current pubkey.
+            verification = point.verify(z, sig)
+            # if it is valid, we break from inner loop.
+            if verification:
+                valid = True
+                break
+        # if signature is not valid for any pubkey, we fail and break from the loop.
+        if not valid:
+            # we remove the additional element from the stack and push a 0, indicating the script failed.
+            stack.append(encode_num(0))
+            break
+    return True
+        
+        
+
 class TestOp(TestCase):
 
     def test_op_2over(self):
@@ -1090,7 +1144,7 @@ OP_CODE_FUNCTIONS = {
     170: op_hash256,
     172: op_checksig,
     173: op_checksigverify,
-    # 174: op_checkmultisig,
+    174: op_checkmultisig,
     # 175: op_checkmultisigverify,
     176: op_nop,
     # 177: op_checklocktimeverify,
