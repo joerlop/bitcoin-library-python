@@ -804,6 +804,10 @@ def op_checkmultisig(stack, z):
             stack.append(encode_num(0))
             break
     return True
+
+# Same as OP_CHECKMULTISIG, but OP_VERIFY is executed afterward.
+def op_checkmultisigverify(stack, z):
+    return op_checkmultisig(stack, z) and op_verify(stack)
         
         
 
@@ -1145,7 +1149,7 @@ OP_CODE_FUNCTIONS = {
     172: op_checksig,
     173: op_checksigverify,
     174: op_checkmultisig,
-    # 175: op_checkmultisigverify,
+    175: op_checkmultisigverify,
     176: op_nop,
     # 177: op_checklocktimeverify,
     # 178: op_checksequenceverify,
