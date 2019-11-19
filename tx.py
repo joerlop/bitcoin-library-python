@@ -36,13 +36,10 @@ class TxFetcher:
             url = '{}/tx/{}.hex'.format(cls.get_url(testnet), tx_id)
             response = requests.get(url)
             try:
-                print("response", response.text)
                 raw = bytes.fromhex(response.text.strip())
             except ValueError:
                 raise ValueError('unexpected response: {}'.format(response.text))
-            print("raw", raw)
             tx = Tx.parse(BytesIO(raw), testnet=testnet)
-            print("tx", tx)
             # make sure the tx we got matches to the hash we requested
             if tx.id() != tx_id:
                 raise RuntimeError('server lied: {} vs {}'.format(tx.id(), tx_id))
@@ -102,15 +99,12 @@ class Tx:
         # s.read(n) will return n bytes
         # version has 4 bytes, little-endian, interpret as int
         version = little_endian_to_int(stream.read(4))
-        print("version", version) 
         # number of inputs
         num_inputs = read_varint(stream)
-        print("num_inputs", num_inputs)
         # initialize inputs array
         inputs = []
         # loop num_inputs times to get all inputs from the stream. 
         for _ in range(num_inputs):
-            print("Hello num inputs")
             # appends a TxIn object to inputs array
             inputs.append(TxIn.parse(stream))
         # get the number of outputs
@@ -198,8 +192,10 @@ class Tx:
         result += encode_varint(len(self.tx_inputs))
         # loop inputs and replace the input's scriptsig at given index with prev_tx's scriptpubkey
         for i, tx_in in enumerate(self.tx_inputs):
+            print("i", i, input_index)
             if i == input_index:
                 # if this is the input I want to find the hash for, script_sig is prev_tx's scriptpubkey
+                print("script_sig")
                 script_sig = tx_in.script_pubkey(self.testnet)
             else:
                 # if it's not the input we're looking for, script_sig is left empty.
@@ -295,7 +291,10 @@ class TxIn:
         # get prev_index in byte format.
         prev_index = int_to_little_endian(self.prev_index, 4)
         # get script_sig in byte format.
-        script_sig = self.script_sig.serialize()
+        if self.script_sig is None:
+            script_sig = b'\x00'
+        else:
+            script_sig = self.script_sig.serialize()
         # get sequence in byte_format.
         sequence = int_to_little_endian(self.sequence, 4)
         return prev_tx + prev_index + script_sig + sequence

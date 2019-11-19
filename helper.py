@@ -71,7 +71,6 @@ def int_to_little_endian(num, length):
 def read_varint(stream):
     # i could be a prefix or an integer. If it's a prefix, it will indicate how big the number is. Else, it is the number.
     i = stream.read(1)[0]
-    print("i", i)
     # if i is 0xfd, next two bytes are the number
     if i == 0xfd:
         return little_endian_to_int(stream.read(2))
