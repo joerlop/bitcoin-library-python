@@ -34,7 +34,9 @@ class Script:
     @classmethod
     def parse(cls, s):
         # script serialization always starts with the length of the script.
+        print("stream", s)
         length = read_varint(s)
+        print("length", length)
         cmds = []
         count = 0
         # parse until whole script has been parsed.
@@ -44,6 +46,7 @@ class Script:
             count += 1
             # this converts the current byte into an int.
             current_byte_as_int = current[0]
+            print("current int", current_byte_as_int)
             # for a number between 1 and 75, we know the next n bytes are an element.
             if current_byte_as_int >= 1 and current_byte_as_int <= 75:
                 n = current_byte_as_int
@@ -58,17 +61,19 @@ class Script:
                 # push the element into the stack.
                 cmds.append(s.read(n))
                 # update the count.
-                count += n
+                count += n + 1
             # 77 is OP_PUSHDATA2, so the next 2 bytes tell us how many bytes the next element is.
             elif current_byte_as_int == 77:
                 n = little_endian_to_int(s.read(2))
                 cmds.append(s.read(n))
-                count += n
+                count += n + 2
             # else we push the opcode onto the stack
             else:
                 op_code = current_byte_as_int
                 cmds.append(op_code)
+            print("count", count)
         # script should have consumed exactly the number of bytes expected. If not we raise an error.
+        print(count, length)
         if count != length:
             raise SyntaxError('Parsing script failed.')
         return cls(cmds)

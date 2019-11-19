@@ -609,6 +609,7 @@ class SignatureTest(TestCase):
 class PrivateKey:
 
     def __init__(self, secret):
+        # secret is an integer that represents the hash256 of the passphrase.
         self.secret = secret
         # public key
         self.point = secret * G    
@@ -685,11 +686,3 @@ class PrivateKeyTest(TestCase):
         expected = 'cNYfWuhDpbNM1JWc3c6JTrtrFVxU4AGhUKgw5f93NP2QaBqmxKkg'
         self.assertEqual(pk.wif(compressed=True, testnet=True), expected)
 
-
-"""
-How to generate an address:
-"""
-# passphrase = b'jonathanerlichloquesea123geryjj.erlich155@gmail.com'
-# secret = little_endian_to_int(hash256(passphrase))
-# pk = PrivateKey(secret)
-# print(pk.point.address(testnet=True))
