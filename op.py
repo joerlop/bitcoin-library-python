@@ -755,6 +755,7 @@ def op_checksig(stack, z):
 
 # If all signatures are valid, 1 is returned, 0 otherwise. 
 # Due to a bug, one extra unused value is removed from the stack - page 148.
+# REWRITE: one sig can only sign one pubkey. Then that pubkey should be removed from consideration.
 def op_checkmultisig(stack, z): 
     if len(stack) < 1:
         return False
@@ -783,26 +784,29 @@ def op_checkmultisig(stack, z):
     # we remove the last element from the stack (the one included because the off by one error)
     stack.pop()
     # verify all the signatures against all pubkeys. If a signature isn't valid for any pubkeys, fail.
-    for signature in signatures:
-        valid = False
-        for pubkey in pubkeys:
-            try:
-                point = S256Point.parse(pubkey)
-                sig = Signature.parse(signature)
-            except (ValueError, SyntaxError) as e:
-                LOGGER.info(e)
-                return False
-            # verify the current signature for the current pubkey.
-            verification = point.verify(z, sig)
-            # if it is valid, we break from inner loop.
-            if verification:
-                valid = True
-                break
-        # if signature is not valid for any pubkey, we fail and break from the loop.
-        if not valid:
-            # we remove the additional element from the stack and push a 0, indicating the script failed.
-            stack.append(encode_num(0))
-            break
+    try:
+        sigs = [Signature.parse(signature) for signature in signatures]
+        points = [S256Point.parse(pubkey) for pubkey in pubkeys]
+    except (ValueError, SyntaxError) as e:
+        LOGGER.info(e)
+        return False
+    # variable to count the number of valid signatures.
+    count = 0
+    # in the next loop, we check that each signature is valid for a pubkey.
+    for sig in sigs:
+        while len(points) > 0:
+            # point is popped so each signature can only be valid for 1 point.
+            point = points.pop()
+            # if the signature is valid for this pubkey, increase the count and break from the while
+            # to check next signature.
+            if point.verify(z, sig):
+                count += 1
+    # if the number of valid signatures is m = each signature is valid for some pubkey, then script is valid.
+    if count == m:
+        stack.append(encode_num(1))
+    # else, script should fail.
+    else:
+        stack.append(encode_num(0))
     return True
 
 # Same as OP_CHECKMULTISIG, but OP_VERIFY is executed afterward.
