@@ -210,3 +210,11 @@ class Script:
             return False
         # any other result means the script is valid.
         return True
+
+    # returns whether this script follows the p2sh special rule: OP_HASH160, 20-byte hash, OP_EQUAL.
+    def is_p2sh_script_pubkey(self):
+        # there should be exactly 3 cmds
+        # OP_HASH160 (0xa9), 20-byte hash, OP_EQUAL (0x87)
+        return len(self.cmds) == 3 and self.cmds[0] == 0xa9 \
+            and type(self.cmds[1]) == bytes and len(self.cmds[1]) == 20 \
+            and self.cmds[2] == 0x87

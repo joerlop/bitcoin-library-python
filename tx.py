@@ -185,18 +185,21 @@ class Tx:
         return total_input - total_output
     
     # Returns the hash of the signature (z) for this transaction.
-    def sig_hash(self, input_index):
+    def sig_hash(self, input_index, redeeem_script=None):
         # we need to manually start serializing the tx.
         result = int_to_little_endian(self.version, 4)
         # add number of inputs.
         result += encode_varint(len(self.tx_inputs))
         # loop inputs and replace the input's scriptsig at given index with prev_tx's scriptpubkey
         for i, tx_in in enumerate(self.tx_inputs):
-            print("i", i, input_index)
             if i == input_index:
-                # if this is the input I want to find the hash for, script_sig is prev_tx's scriptpubkey
-                print("script_sig")
-                script_sig = tx_in.script_pubkey(self.testnet)
+                # if it's a p2sh address, which means there's a redeem_script, we replace the ScriptSig
+                # with the RedeemScript.
+                if redeeem_script:
+                    script_sig = redeeem_script
+                else:
+                    # if this is the input I want to find the hash for, script_sig is prev_tx's scriptpubkey
+                    script_sig = tx_in.script_pubkey(self.testnet)
             else:
                 # if it's not the input we're looking for, script_sig is left empty.
                 script_sig = None
