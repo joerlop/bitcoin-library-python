@@ -12,6 +12,9 @@ from helper import (
 from op import (
     OP_CODE_FUNCTIONS,
     OP_CODE_NAMES,
+    op_hash160,
+    op_equal,
+    op_verify
 )
 
 LOGGER = getLogger(__name__)
@@ -168,6 +171,37 @@ class Script:
             # if cmd is not an opcode, it's an element. We push it to the stack.
             else:
                 stack.append(cmd)
+                # we check if next commands form the pattern that executes the special p2sh rule - page 152 and 156.
+                # if that is the case, the last cmd appended would be the RedeemScript, which is an element.
+                # That's why we check for the next 3 commands only.
+                # Specifically, we check that they are: OP_HASH160 (0xa9), a hash element and OP_EQUAL(0x87).
+                if len(cmds) == 3 and cmds[0] == 0xa9 and type(cmds[1]) == bytes and len(cmds[1]) == 20 and cmds[2] == 0x87:
+                    # we run the sequence manually.
+                    cmds.pop()
+                    # the only value we need to save is the hash, the other two we know are OP_HASH160 and OP_EQUAL.
+                    h160 = cmds.pop()
+                    cmds.pop()
+                    # first we perform the op_hash160 on the current stack, which hashes the top element of the stack.
+                    if not op_hash160(stack):
+                        return False
+                    # then we push the hash160 we got in the commands to the stack.
+                    stack.append(h160)
+                    # next we perform an op_equal, which compares the 2 top most elements of the stack.
+                    if not op_equal(stack):
+                        return False
+                    # next we need to check if the element left on the stack is a 1, which is what op_verify does.
+                    if not op_verify(stack):
+                        LOGGER.info('bad p2sh h160')
+                        return False
+                    # if we got to this point, we know cmd is the RedeemScrtipt.
+                    # to be able to parse it, we need to prepend its length.
+                    redeem_script = encode_varint(len(cmd)) + cmd
+                    # we convert the script into a stream of bytes.
+                    stream = BytesIO(redeem_script)
+                    # we get the parsed script
+                    parsed_script = Script.parse(stream)
+                    # we extend the commands set with the commands from the parsed RedeemScript.
+                    cmds.extend(parsed_script.cmds)
         # if stack is empty after running all the commands, we fail the script returning False.
         if len(stack) == 0:
             return False
@@ -176,3 +210,11 @@ class Script:
             return False
         # any other result means the script is valid.
         return True
+
+    # returns whether this script follows the p2sh special rule: OP_HASH160, 20-byte hash, OP_EQUAL.
+    def is_p2sh_script_pubkey(self):
+        # there should be exactly 3 cmds
+        # OP_HASH160 (0xa9), 20-byte hash, OP_EQUAL (0x87)
+        return len(self.cmds) == 3 and self.cmds[0] == 0xa9 \
+            and type(self.cmds[1]) == bytes and len(self.cmds[1]) == 20 \
+            and self.cmds[2] == 0x87

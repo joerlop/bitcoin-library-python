@@ -6,7 +6,6 @@ from io import BytesIO
 import hashlib
 import hmac
 
-
 class FieldElement:
 
     def __init__(self, num, prime):
@@ -436,9 +435,10 @@ class S256Point(Point):
     def hash160(self, compressed=True):
         return hash160(self.sec(compressed))
     
-    # returns the address string for the given point - page 83
+    # returns the p2pkh address for the given point - page 83
+    # We know it's p2pkh because of the prefixes.
     def address(self, compressed=True, testnet=False):
-        # prefix depends on address being testnet or mainnet
+        # prefix depends on address being testnet or mainnet and type of address.
         if testnet:
             prefix = b'\x6f'
         else:

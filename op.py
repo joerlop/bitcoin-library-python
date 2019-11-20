@@ -248,31 +248,6 @@ def op_hash160(stack):
     stack.append(hash160(element))
     return True
 
-# consumes 2 stack elements (pubkey and signature) and determines if they are valid for this transaction. 
-# OP_CHECKSIG will push a 1 to the stack if they are valid. 0 otherwise - page 112
-def op_checksig(stack, z):
-    # if stack is has less than 2 elements, fail.
-    if len(stack) < 2:
-        return False
-    # sec_pubkey is the top element of stack.
-    sec_pubkey = stack.pop()
-    # take off the last byte of the signature as that's the hash_type.
-    # Signature format is [<DER signature> <1 byte hash-type>]. Hashtype value is last byte of the sig.
-    der_signature = stack.pop()[:-1]
-    try:
-        point = S256Point.parse(sec_pubkey)
-        sig = Signature.parse(der_signature)
-    except (ValueError, SyntaxError) as e:
-        LOGGER.info(e)
-        return False
-    valid = point.verify(z, sig)
-    # push a 1 if it's valid, 0 otherwise.
-    if valid:
-        stack.append(encode_num(1))
-    else:
-        stack.append(encode_num(0))
-    return True
-
 # consumes top 2 elements, adds them and pushes the result into the stack.
 def op_add(stack):
     # if stack has less than 2 elements, return False
@@ -753,6 +728,92 @@ def op_sha256(stack):
 def op_checksigverify(stack, z):
     return op_checksig(stack, z) and op_verify(stack)
 
+# consumes 2 stack elements (pubkey and signature) and determines if they are valid for this transaction. 
+# OP_CHECKSIG will push a 1 to the stack if they are valid. 0 otherwise - page 112
+def op_checksig(stack, z):
+    # if stack is has less than 2 elements, fail.
+    if len(stack) < 2:
+        return False
+    # sec_pubkey is the top element of stack.
+    sec_pubkey = stack.pop()
+    # take off the last byte of the signature as that's the hash_type.
+    # Signature format is [<DER signature> <1 byte hash-type>]. Hashtype value is last byte of the sig.
+    der_signature = stack.pop()[:-1]
+    try:
+        point = S256Point.parse(sec_pubkey)
+        sig = Signature.parse(der_signature)
+    except (ValueError, SyntaxError) as e:
+        LOGGER.info(e)
+        return False
+    valid = point.verify(z, sig)
+    # push a 1 if it's valid, 0 otherwise.
+    if valid:
+        stack.append(encode_num(1))
+    else:
+        stack.append(encode_num(0))
+    return True
+
+# If all signatures are valid, 1 is returned, 0 otherwise. 
+# Due to a bug, one extra unused value is removed from the stack - page 148.
+# REWRITE: one sig can only sign one pubkey. Then that pubkey should be removed from consideration.
+def op_checkmultisig(stack, z): 
+    if len(stack) < 1:
+        return False
+    # n is the number of public keys
+    n = decode_num(stack.pop())
+    if len(stack) < n + 1:
+        return False
+    # get all the public keys into a list.
+    pubkeys = []
+    for _ in range(n):
+        pubkeys.append(stack.pop())
+    if len(stack) < 1:
+        return False
+    # m is the number of signatures
+    m = decode_num(stack.pop())
+    # m + 2 because of the additional element at the bottom of the stack that is added.
+    if len(stack) < m + 1:
+        return False
+    # get all the signatures.
+    signatures = []
+    for _ in range(m):
+        # take off last byte, which is the hashtype
+        signatures.append(stack.pop()[:-1])
+    if len(stack) < 1:
+        return False
+    # we remove the last element from the stack (the one included because the off by one error)
+    stack.pop()
+    # verify all the signatures against all pubkeys. If a signature isn't valid for any pubkeys, fail.
+    try:
+        sigs = [Signature.parse(signature) for signature in signatures]
+        points = [S256Point.parse(pubkey) for pubkey in pubkeys]
+    except (ValueError, SyntaxError) as e:
+        LOGGER.info(e)
+        return False
+    # variable to count the number of valid signatures.
+    count = 0
+    # in the next loop, we check that each signature is valid for a pubkey.
+    while len(points) > 0:
+        # point is popped so each signature can only be valid for 1 point.
+        point = points.pop()
+        for sig in sigs:
+            # if the signature is valid for this pubkey, increase the count and break from the while
+            # to check next signature.
+            if point.verify(z, sig):
+                count += 1
+    # if the number of valid signatures is m = each signature is valid for some pubkey, then script is valid.
+    if count == m:
+        stack.append(encode_num(1))
+    # else, script should fail.
+    else:
+        stack.append(encode_num(0))
+    return True
+
+# Same as OP_CHECKMULTISIG, but OP_VERIFY is executed afterward.
+def op_checkmultisigverify(stack, z):
+    return op_checkmultisig(stack, z) and op_verify(stack)   
+        
+
 class TestOp(TestCase):
 
     def test_op_2over(self):
@@ -1015,6 +1076,16 @@ class TestOp(TestCase):
         sig = bytes.fromhex('3045022000eff69ef2b1bd93a66ed5219add4fb51e11a840f404876325a1e8ffe0529a2c022100c7207fee197d27c618aea621406f6bf5ef6fca38681d82b2f06fddbdce6feab601')
         stack = [sig, sec]
         self.assertTrue(op_checksigverify(stack, z))
+    
+    def test_op_checkmultisig(self):
+        z = 0xe71bfa115715d6fd33796948126f40a8cdd39f187e4afb03896795189fe1423c
+        sig1 = bytes.fromhex('3045022100dc92655fe37036f47756db8102e0d7d5e28b3beb83a8fef4f5dc0559bddfb94e02205a36d4e4e6c7fcd16658c50783e00c341609977aed3ad00937bf4ee942a8993701')
+        sig2 = bytes.fromhex('3045022100da6bee3c93766232079a01639d07fa869598749729ae323eab8eef53577d611b02207bef15429dcadce2121ea07f233115c6f09034c0be68db99980b9a6c5e75402201')
+        sec1 = bytes.fromhex('022626e955ea6ea6d98850c994f9107b036b1334f18ca8830bfff1295d21cfdb70')
+        sec2 = bytes.fromhex('03b287eaf122eea69030a0e9feed096bed8045c8b98bec453e1ffac7fbdbd4bb71')
+        stack = [b'', sig1, sig2, b'\x02', sec1, sec2, b'\x02']
+        self.assertTrue(op_checkmultisig(stack, z))
+        self.assertEqual(decode_num(stack[0]), 1)
 
 
 OP_CODE_FUNCTIONS = {
@@ -1090,8 +1161,8 @@ OP_CODE_FUNCTIONS = {
     170: op_hash256,
     172: op_checksig,
     173: op_checksigverify,
-    # 174: op_checkmultisig,
-    # 175: op_checkmultisigverify,
+    174: op_checkmultisig,
+    175: op_checkmultisigverify,
     176: op_nop,
     # 177: op_checklocktimeverify,
     # 178: op_checksequenceverify,
