@@ -223,8 +223,17 @@ class Tx:
     def verify_input(self, input_index):
         # get the wanted input.
         tx_in = self.tx_inputs[input_index]
+        # check whether it's a p2sh input.
+        if tx_in.script_pubkey(self.testnet).is_p2sh_script_pubkey:
+            # If it is, we know the last cmd of the ScriptSig is the RedeemScript - page 151
+            cmd = tx_in.script_sig.cmds[-1]
+            # Now we parse it.
+            raw_redeem = encode_varint(len(cmd)) + cmd # prepend length as varint to be able to parse it.
+            redeem_script = Script.parse(BytesIO(raw_redeem))
+        else:
+            redeem_script = None
         # compute the signature hash for input.
-        z = self.sig_hash(input_index)
+        z = self.sig_hash(input_index, redeem_script)
         # combine scripts.
         combined_script = tx_in.script_sig + tx_in.script_pubkey(self.testnet)
         # evaluate them.
