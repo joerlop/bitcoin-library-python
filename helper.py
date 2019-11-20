@@ -96,3 +96,22 @@ def encode_varint(i):
         return b'\xff' + int_to_little_endian(i, 8)
     else:
         raise RuntimeError('integer too large: {}'.format(i))
+
+# function that converts a 20-byte hash160 into a p2sh address.
+def h160_to_p2pkh_address(h160, testnet=False):
+    # prefix depends on address being testnet or mainnet
+    if testnet:
+        prefix = b'\x6f'
+    else:
+        prefix = b'\x00'
+    # combine prefix with hash 160 of sec
+    combined = prefix + h160
+    return encode_base58_checksum(combined)
+
+
+# function that converts a 20-byte hash160 into a p2sh address.
+def h160_to_p2sh_address(h160, testnet=False):
+    if testnet:
+        return encode_base58_checksum(b'\xc4' + h160)
+    else:
+        return encode_base58_checksum(b'\x05' + h160)
