@@ -23,15 +23,25 @@ class Block:
     def parse(cls, stream):
         # version is 4 bytes, LE. We interpret it as int for parsing.
         version = little_endian_to_int(stream.read(4))
-        # previous block is 32 bytes, LE. prev_block is a 32-byte hash, that's why we don't interpret it as int.
+        # previous block is 32 bytes, LE. prev_block is a 32-byte hash, that's why we don't interpret it as int, but leave as bytes.
         prev_block = stream.read(32)[::-1]
-        # merkle root is 32 bytes, LE. merkle_root is a 32-byte hash, that's why we don't interpret it as int.
+        # merkle root is 32 bytes, LE. merkle_root is a 32-byte hash, that's why we don't interpret it as int, but leave it as bytes.
         merkle_root = stream.read(32)[::-1]
         # timestamp is 4 bytes, LE. We interpret it as int for parsing.
         timestamp = little_endian_to_int(stream.read(4))
-        # bits is 4 bytes.
+        # bits is 4 bytes. Left as bytes for parsing.
         bits = stream.read(4)
-        # nonce is 4 bytes.
+        # nonce is 4 bytes. Left as bytes for parsing.
         nonce = stream.read(4)
         # we return a Block object.
         return cls(version, prev_block, merkle_root, timestamp, bits, nonce)
+    
+    # from a Block object, returns its serialization in bytes format. Opposite from parse.
+    def serialize(self):
+        version = int_to_little_endian(self.version, 4)
+        prev_block = self.prev_block[::-1]
+        merkle_root = self.merkle_root[::-1]
+        timestamp = int_to_little_endian(self.timestamp, 4)
+        bits = self.bits
+        nonce = self.nonce
+        return version + prev_block + merkle_root + timestamp + bits + nonce
