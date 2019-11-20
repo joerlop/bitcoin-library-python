@@ -123,7 +123,7 @@ class Tx:
     def parse_segwit(cls, s, testnet=False):
         version = little_endian_to_int(s.read(4))
         marker = s.read(2)
-        if marker != b'\x00\x01':  # <1>
+        if marker != b'\x00\x01':  
             raise RuntimeError('Not a segwit transaction {}'.format(marker))
         num_inputs = read_varint(s)
         inputs = []
@@ -133,7 +133,7 @@ class Tx:
         outputs = []
         for _ in range(num_outputs):
             outputs.append(TxOut.parse(s))
-        for tx_in in inputs:  # <2>
+        for tx_in in inputs:  
             num_items = read_varint(s)
             items = []
             for _ in range(num_items):
@@ -146,7 +146,6 @@ class Tx:
         locktime = little_endian_to_int(s.read(4))
         return cls(version, inputs, outputs, locktime, 
                    testnet=testnet, segwit=True)
-    # end::source3[]
 
     # returns the bytes serialization of the transaction
     def serialize(self):
@@ -270,6 +269,9 @@ class Tx:
         # verify the input was signed correctly.
         return self.verify_input(input_index)
     
+    # returns whether the transaction is a coinbase transaction - page 164.
+    def is_coinbase(self):
+        return len(self.tx_inputs) == 1 and self.tx_inputs[0].prev_tx == b'\x00' * 32 and self.tx_inputs[0].prev_index == 0xffffffff
         
 # class that represents a transaction input - page 95.
 class TxIn:
