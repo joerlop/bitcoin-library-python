@@ -811,8 +811,7 @@ def op_checkmultisig(stack, z):
 
 # Same as OP_CHECKMULTISIG, but OP_VERIFY is executed afterward.
 def op_checkmultisigverify(stack, z):
-    return op_checkmultisig(stack, z) and op_verify(stack)
-        
+    return op_checkmultisig(stack, z) and op_verify(stack)   
         
 
 class TestOp(TestCase):
