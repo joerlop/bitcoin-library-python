@@ -272,7 +272,17 @@ class Tx:
     # returns whether the transaction is a coinbase transaction - page 164.
     def is_coinbase(self):
         return len(self.tx_inputs) == 1 and self.tx_inputs[0].prev_tx == b'\x00' * 32 and self.tx_inputs[0].prev_index == 0xffffffff
-        
+
+    # returns the height of the block for this coinbase transaction as an int - page 166
+    def coinbase_height(self):
+        # raise an error if it's not a coinbase transaction.
+        if not self.is_coinbase:
+            raise RuntimeError("Not a coinbase transaction")
+        # get the scriptsig from the transaction input.
+        script_sig = self.tx_inputs[0].script_sig
+        # we know that the first command of the ScriptSig is the blockheight (in bytes), so we convert it to int.
+        return little_endian_to_int(script_sig.cmds[0])
+
 # class that represents a transaction input - page 95.
 class TxIn:
 
