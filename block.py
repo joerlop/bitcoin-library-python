@@ -45,3 +45,27 @@ class Block:
         bits = self.bits
         nonce = self.nonce
         return version + prev_block + merkle_root + timestamp + bits + nonce
+    
+    # returns the hash256 of the block's serialization - page 167
+    def hash(self):
+        block_hash = hash256(self.serialize())
+        return block_hash[::-1]
+    
+    # returns whether the block is using BIP9 - page 168.
+    def bip9(self):
+        # checks if the first 3 bits of version are equal to 001, which would mean the miner is using BIP9.
+        return self.version >> 29 == 0b001
+    
+    # returns whether the block is signaling for BIP91 - page 168.
+    def bip91(self):
+        # if bit 4 of version is a 1, it means miner is signaling for BIP91.
+        # Note that bit 0 is the rightmost bit.
+        return self.version >> 4 & 1 == 1
+    
+    # returns whether the block is signaling for BIP141 - page 168.
+    def bip141(self):
+        # if bit 1 of version is a 1, it means miner is signaling for BIP141.
+        # Note that bit 0 is the rightmost bit.
+        return self.version >> 1 & 1 == 1
+    
+    
