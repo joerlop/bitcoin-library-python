@@ -17,7 +17,7 @@ class Block:
         self.timestamp = timestamp
         self.bits = bits
         self.nonce = nonce
-    
+        
     # receives a stream of bytes that represent a block and returns a Block object - page 166.
     @classmethod
     def parse(cls, stream):

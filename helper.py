@@ -115,3 +115,15 @@ def h160_to_p2sh_address(h160, testnet=False):
         return encode_base58_checksum(b'\xc4' + h160)
     else:
         return encode_base58_checksum(b'\x05' + h160)
+
+# converts a block header's bits field into the target value - page 172.
+# the target is important because a valid proof-of-work is a hash of the block header that, when interpreted
+# as little endian int, is below the target. 
+def bits_to_target(bits):
+    # last byte of bits field is the exponent.
+    exponent = bits[-1]
+    # remainder of the bits field is the coefficient.
+    coefficient = little_endian_to_int(bits[:-1])
+    # we calculate the target as follows
+    target = coefficient * 256**(exponent - 3)
+    return target
