@@ -5,7 +5,8 @@ from helper import (
     little_endian_to_int,
     read_varint,
     encode_varint,
-    SIGHASH_ALL
+    SIGHASH_ALL,
+    bits_to_target
 )
 
 class Block:
@@ -17,7 +18,7 @@ class Block:
         self.timestamp = timestamp
         self.bits = bits
         self.nonce = nonce
-        
+         
     # receives a stream of bytes that represent a block and returns a Block object - page 166.
     @classmethod
     def parse(cls, stream):
@@ -68,4 +69,13 @@ class Block:
         # Note that bit 0 is the rightmost bit.
         return self.version >> 1 & 1 == 1
     
-    
+    def target(self):
+        return bits_to_target(self.bits)
+
+    # returns the difficulty for this block - page 173.
+    def difficulty(self):
+        # compute the target.
+        target = self.target()
+        # calculate the difficulty using its formula.
+        difficulty = 0xffff * 256**(0x1d-3) / target
+        return difficulty
