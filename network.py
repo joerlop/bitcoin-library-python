@@ -170,3 +170,10 @@ class SimpleNode:
         if self.logging:
             print(f"sending: {envelope}")
         self.socket.sendall(envelope.serialize())
+
+    # reads a new mesage from the socket - page 182.
+    def read(self):
+        envelope = NetworkEnvelope.parse(self.stream, testnet=self.testnet)
+        if self.logging:
+            print(f"receiving: {envelope}")
+        return envelope
