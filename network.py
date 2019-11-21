@@ -139,8 +139,34 @@ class VerAckMessage:
         pass
 
     @classmethod
-    def parse(cls, s)
-    return cls()
+    def parse(cls, s):
+        return cls()
 
-    def serialize(self)
-    return b''
+    def serialize(self):
+        return b''
+
+
+class SimpleNode:
+
+    def __init__(self, host, port=None, testnet=False, logging=False):
+        if port is None:
+            if testnet:
+                port = 18333
+            else:
+                port = 8333
+        self.testnet = testnet
+        self.logging = logging
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.connect((host, port))
+        # we create a stream to be able to read from the socket. A stream made this way can be
+        # passed to all the parse methods - page 181.
+        self.stream = self.socket.makefile('rb', None)
+
+    # send a message to the connected node.
+    def send(self, message):
+        # the command property and serialize method are expected to exist in the message object - page 183.
+        envelope = NetworkEnvelope(
+            message.command, message.serialize(), self.testnet)
+        if self.logging:
+            print(f"sending: {envelope}")
+        self.socket.sendall(envelope.serialize())
