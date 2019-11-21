@@ -128,3 +128,19 @@ class VersionMessage:
         else:
             result += b'\x00'
         return result
+
+
+# a verack message is a minimal network message - page 182.
+class VerAckMessage:
+
+    command = b'verack'
+
+    def __init__(self):
+        pass
+
+    @classmethod
+    def parse(cls, s)
+    return cls()
+
+    def serialize(self)
+    return b''
