@@ -4,6 +4,8 @@ import hashlib
 
 BASE58_ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 SIGHASH_ALL = 1
+# represents the number of seconds in 2 weeks.
+TWO_WEEKS = 60 * 60 * 24 * 14
 
 def run(test):
     suite = TestSuite()
@@ -115,3 +117,52 @@ def h160_to_p2sh_address(h160, testnet=False):
         return encode_base58_checksum(b'\xc4' + h160)
     else:
         return encode_base58_checksum(b'\x05' + h160)
+
+# converts a block header's bits field into the target value - page 172.
+# the target is important because a valid proof-of-work is a hash of the block header that, when interpreted
+# as little endian int, is below the target. 
+def bits_to_target(bits):
+    # last byte of bits field is the exponent.
+    exponent = bits[-1]
+    # remainder of the bits field is the coefficient.
+    coefficient = little_endian_to_int(bits[:-1])
+    # we calculate the target as follows
+    target = coefficient * 256**(exponent - 3)
+    return target
+
+# receives a target int and returns the bits in bytes - page 175.
+def target_to_bits(target):
+    # convert int to 4 bytes (32 bits), BE
+    raw_bytes = target.to_bytes(32, 'big')
+    # get rid of all the leading zeros.
+    raw_bytes = raw_bytes.lstrip((b'\x00'))
+    # The bits format is a way to express large numbers succinctly and can be used with both positive and
+    # negative numbers.
+    # If the first bit in the coefficient is a 1, the bits field is interpreted as a negative number.
+    # Since the target is always positive for our usecase, we shift everything over by 1 byte if the first bit is 1.
+    # if the first byte is bigger than 0x7f (127), it means the first bit has to be a 1, because in binary 1000 0000 is 128.
+    if raw_bytes[0] > 0x7f:
+        # the exponent is how long the number is in base 256.
+        exponent = len(raw_bytes) + 1
+        # the coefficient is the first three digits of the base 256 number
+        coefficient = b'\x00' + raw_bytes[:2]
+    else:
+        exponent = len(raw_bytes)
+        coefficient = raw_bytes[:3]
+    # the coefficient is in LE and the exponent goes last in the bits format.
+    bits = coefficient[::-1] + bytes([exponent])
+    return bits
+
+# returns new bits after a 2.016 block period - page 175.
+def calculate_new_bits(previous_bits, time_differential):
+    # ensures max. increase in difficulty to be x4.
+    if time_differential > TWO_WEEKS * 4:
+        time_differential = TWO_WEEKS * 4
+    # ensures max. decrease in difficulty to be /4.
+    elif time_differential < TWO_WEEKS // 4:
+        time_differential = TWO_WEEKS // 4
+    # calculate the new target based on time differential.
+    new_target = bits_to_target(previous_bits) * time_differential // TWO_WEEKS
+    # compute new bits based on new target.
+    new_bits = target_to_bits(new_target)
+    return new_bits
