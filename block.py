@@ -79,3 +79,14 @@ class Block:
         # calculate the difficulty using its formula.
         difficulty = 0xffff * 256**(0x1d-3) / target
         return difficulty
+    
+    # returns whether this block is valid. Whether it's proof of work is valid - page 174.
+    def check_pow(self):
+        # first we get the header in bytes format.
+        block_header = self.serialize()
+        # we do a hash256 on the block's header.
+        h256 = hash256(block_header)
+        # we interpret it as a LE integer.
+        proof = little_endian_to_int(h256)
+        # if this value is smaller than the target, we have a valid proof of work.
+        return proof < self.target()
