@@ -177,3 +177,17 @@ class SimpleNode:
         if self.logging:
             print(f"receiving: {envelope}")
         return envelope
+
+    # lets us wait for any one of several commands (message classes) - page 183.
+    # note: a commercial-strength would not use something like this.
+    def wait_for(self, *message_classes):
+        command = None
+        command_to_class = {m.command: m for m in message_classes}
+        while command not in command_to_class.keys():
+            envelope = self.read()
+            command = envelope.command
+            if command == VersionMessage.command:
+                self.send(VerAckMessage())
+            elif command == PingMessage.command:
+                self.send(PongMessage(envelope.payload))
+        return command_to_class[command].parse(envelope.stream())
