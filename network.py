@@ -34,3 +34,34 @@ class NetworkEnvelope:
     
     def __repr__(self):
         return '{}: {}'.format(self.command.decode('ascii'), self.payload.hex())
+
+    # receives a stream of bytes representing a NetworkEnvelope and returns an object of the class.
+    @classmethod
+    def parse(cls, stream, testnet=False):
+        # first 4 bytes are the magic.
+        magic = stream.read(4)
+        # check that we received a magic.
+        if magic == b'':
+            raise IOError('Connection reset!')
+        # check that magic is correct.
+        if testnet:
+            expected_magic = TESTNET_NETWORK_MAGIC
+        else:
+            expected_magic = NETWORK_MAGIC
+        if expected_magic != magic:
+            raise SyntaxError(f"Magic is not right: {magic.hex()} vs. {expected_magic.hex()}")
+        # next 12 are the command.
+        command = stream.read(12)
+        # strip command from leading zeros.
+        command = command.strip(b'\x00')
+        # next 4 are the payload length, in LE.
+        payload_length = little_endian_to_int(stream.read(4))
+        # next 4 are the payload checksum.
+        payload_checksum = stream.read(4)
+        # next is the payload.
+        payload = stream.read(payload_length)
+        # check checksum is correct.
+        calculated_checksum = hash256(payload)[:4]
+        if payload_checksum != calculated_checksum:
+            raise IOError('checksum does not match')
+        return cls(command, payload, testnet)
