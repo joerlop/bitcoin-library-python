@@ -65,3 +65,16 @@ class NetworkEnvelope:
         if payload_checksum != calculated_checksum:
             raise IOError('checksum does not match')
         return cls(command, payload, testnet)
+
+    # returns the bytes serialization of this NetworkEnvelope object - page 179.
+    def serialize(self):
+        magic = self.magic
+        # make the command exactly 12 bytes.
+        command = self.command + b'\x00' * (12 - len(self.command))
+        # we need to convert the payload length from int to LE bytes.
+        payload_length = int_to_little_endian(len(self.payload), 4)
+        payload = self.payload
+        # compute the payload checksum, which is first 4 bytes of hash256 of payload.
+        payload_checksum = hash256(self.payload)[:4]
+        # return the concatenation
+        return magic + command + payload_length + payload_checksum + payload
