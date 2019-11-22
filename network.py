@@ -231,10 +231,11 @@ class GetHeadersMessage:
         # We're going to assume that the number of block header groups is 1.
         # A more robust implementation would be able to handle more than 1.
         self.num_hashes = num_hashes
+        # Hash of the start block header.
         if start_block is None:
             raise RuntimeError("A start block is required.")
         self.start_block = start_block
-        # if end block is None, we ask for as many as the server can send us, which we do by sending 32 bytes of 0.
+        # Hash of the last desired block header; set to zero to get as many blocks as possible
         if end_block is None:
             self.end_block = b'\x00' * 32
         else:
@@ -257,6 +258,31 @@ class GetHeadersMessage:
         start_block = stream.read(32)[::-1]
         end_block = stream.read(32)[::-1]
         return cls(version, num_hashes, start_block, end_block)
+
+    # When we ask for some headers with a getheaders command (GetHeadersMessage), the other node will
+    # reply with a headers command. That's why we create this class. To handle that response - page 186.
+    class HeadersMessage:
+
+        command = b'headers'
+
+        def __init__(self, blocks):
+            # List with Block objects.
+            self.blocks = blocks
+
+        @classmethod
+        def parse(cls, stream):
+            # The headers message starts with the number of headers as a varint.
+            num_headers = read_varint(stream)
+            # We need to append each block to this list.
+            blocks = []
+            for _ in range(num_headers):
+                # Each block is parsed with the Block's class parse method using the same stream.
+                blocks.append(Block.parse(stream))
+                # The number of txs is always 0 and is remnant of block parsing.
+                num_txs = read_varint(stream)
+                if num_txs != 0:
+                    raise RuntimeError('number of transactions not 0.')
+            return cls(blocks)
 
 
 class SimpleNode:
