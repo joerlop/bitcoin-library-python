@@ -26,6 +26,7 @@ TESTNET_NETWORK_MAGIC = b'\x0b\x11\x09\x07'
 class NetworkEnvelope:
 
     def __init__(self, command, payload, testnet=False):
+        # command is an ASCII string identifying the packet content
         self.command = command
         self.payload = payload
         if testnet:
@@ -82,7 +83,12 @@ class NetworkEnvelope:
         return magic + command + payload_length + payload_checksum + payload
 
 
+# When a node creates an outgoing connection, it will immediately advertise its version.
+# The remote node will respond with its version.
+# No further communication is possible until both peers have exchanged their version.
 class VersionMessage:
+
+    command = b'version'
 
     def __init__(self, version=70015, services=0, timestamp=None, receiver_services=0,
                  receiver_ip=b'\x00\x00\x00\x00', receiver_port=8333, sender_services=0,
@@ -130,7 +136,8 @@ class VersionMessage:
         return result
 
 
-# a verack message is a minimal network message - page 182.
+# The verack message is sent in reply to version.
+# This message consists of only a message header with the command string "verack".
 class VerAckMessage:
 
     command = b'verack'
@@ -146,6 +153,42 @@ class VerAckMessage:
         return b''
 
 
+# The ping message is sent primarily to confirm that the TCP/IP connection is still valid.
+# An error in transmission is presumed to be a closed connection and the address is removed as a current peer.
+class PingMessage:
+
+    command = b'ping'
+
+    def __init__(self, nonce):
+        self.nonce = nonce
+
+    @classmethod
+    def parse(cls, s):
+        nonce = s.read(8)
+        return cls(nonce)
+
+    def serialize(self):
+        return self.nonce
+
+
+# The pong message is sent in response to a ping message.
+# In modern protocol versions, a pong response is generated using a nonce included in the ping.
+class PongMessage:
+
+    command = b'pong'
+
+    def __init__(self, nonce):
+        self.nonce = nonce
+
+    @classmethod
+    def parse(cls, s):
+        nonce = s.read(8)
+        return cls(nonce)
+
+    def serialize(self):
+        return self.nonce
+
+
 class SimpleNode:
 
     def __init__(self, host, port=None, testnet=False, logging=False):
@@ -156,7 +199,16 @@ class SimpleNode:
                 port = 8333
         self.testnet = testnet
         self.logging = logging
+        # socket.socket() is used to create a socket object.
+        # AF_INET is the Internet address family for IPv4.
+        # we specify the socket type (2nd argument) as socket.SOCK_STREAM because
+        # when you do that, the default protocol that’s used is the Transmission Control Protocol (TCP).
+        # This is a good default and probably what you want.
+        # TCP relieves you from having to worry about packet loss, data arriving out-of-order,
+        # and many other things that invariably happen when you’re communicating across a network.
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # connect() is used to connect to the server. host is the server's IP address and port is the
+        # port used by the server.
         self.socket.connect((host, port))
         # we create a stream to be able to read from the socket. A stream made this way can be
         # passed to all the parse methods - page 181.
