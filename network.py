@@ -249,6 +249,15 @@ class GetHeadersMessage:
         result += self.end_block[::-1]
         return result
 
+    # Receives a stream of bytes and returns a GetHeadersMessage object.
+    @classmethod
+    def parse(cls, stream):
+        version = little_endian_to_int(stream.read(4))
+        num_hashes = read_varint(stream)
+        start_block = stream.read(32)[::-1]
+        end_block = stream.read(32)[::-1]
+        return cls(version, num_hashes, start_block, end_block)
+
 
 class SimpleNode:
 
