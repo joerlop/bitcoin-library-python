@@ -212,6 +212,26 @@ class PongMessage:
         return self.nonce
 
 
+# Message to ask for block headers - page 184.
+class GetHeadersMessage:
+
+    command = b'getheaders'
+
+    def __init__(self, version=70015, num_hashes=1, start_block=None, end_block=None):
+        self.version = version
+        # We're going to assume that the number of block header groups is 1.
+        # A more robust implementation would be able to handle more than 1.
+        self.num_hashes = num_hashes
+        if start_block is None:
+            raise RuntimeError("A start block is required.")
+        self.start_block = start_block
+        # if end block is None, we ask for as many as the server can send us, which we do by sending 32 bytes of 0.
+        if end_block is None:
+            self.end_block = b'\x00' * 32
+        else:
+            self.end_block = end_block
+
+
 class SimpleNode:
 
     # port and host are the port and host we want to connect to.
