@@ -82,6 +82,10 @@ class NetworkEnvelope:
         # return the concatenation
         return magic + command + payload_length + payload_checksum + payload
 
+    # Returns a stream for parsing the payload.
+    def stream(self):
+        return BytesIO(self.payload)
+
 
 # When a node creates an outgoing connection, it will immediately advertise its version.
 # The remote node will respond with its version.
