@@ -98,8 +98,11 @@ class VersionMessage:
                  receiver_ip=b'\x00\x00\x00\x00', receiver_port=8333, sender_services=0,
                  sender_ip=b'\x00\x00\x00\x00', sender_port=8333, nonce=None,
                  user_agent=b'programmingbitcoin:0.1', latest_block=0, relay=False):
+        # Identifies protocol version being used by the node.
         self.version = version
+        # features to be enabled for this connection.
         self.services = services
+        # standard UNIX timestamp in seconds.
         if timestamp is None:
             self.timestamp = int(time.time())
         else:
@@ -110,12 +113,17 @@ class VersionMessage:
         self.sender_services = sender_services
         self.sender_ip = sender_ip
         self.sender_port = sender_port
+        # Node random nonce, randomly generated every time a version packet is sent.
+        # This nonce is used to detect connections to self.
         if nonce is None:
             self.nonce = int_to_little_endian(randint(0, 2**64), 8)
         else:
             self.nonce = nonce
+
         self.user_agent = user_agent
+        # The last block received by the emitting node.
         self.latest_block = latest_block
+        # Whether the remote peer should announce relayed transactions or not, see BIP 0037.
         self.relay = relay
 
     # returns the VersionMessage in bytes format.
@@ -218,6 +226,7 @@ class GetHeadersMessage:
     command = b'getheaders'
 
     def __init__(self, version=70015, num_hashes=1, start_block=None, end_block=None):
+        # Identifies protocol version being used by the node.
         self.version = version
         # We're going to assume that the number of block header groups is 1.
         # A more robust implementation would be able to handle more than 1.
@@ -230,6 +239,15 @@ class GetHeadersMessage:
             self.end_block = b'\x00' * 32
         else:
             self.end_block = end_block
+
+    # Returns bytes serialization of the GetHeadersMessage object.
+    def serialize(self):
+        result = int_to_little_endian(self.version, 4)
+        result += encode_varint(self.num_hashes)
+        # start and end block are already in bytes, so we just convert them to LE.
+        result += self.start_block[::-1]
+        result += self.end_block[::-1]
+        return result
 
 
 class SimpleNode:
