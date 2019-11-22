@@ -139,6 +139,25 @@ class VersionMessage:
             result += b'\x00'
         return result
 
+    @classmethod
+    def parse(cls, stream):
+        version = little_endian_to_int(stream.read(4))
+        services = little_endian_to_int(stream.read(8))
+        timestamp = little_endian_to_int(stream.read(8))
+        receiver_services = little_endian_to_int(stream.read(8))
+        receiver_ip = stream.read(12)
+        receiver_port = little_endian_to_int(stream.read(2))
+        sender_services = little_endian_to_int(stream.read(8))
+        sender_ip = stream.read(12)
+        sender_port = little_endian_to_int(stream.read(2))
+        nonce = stream.read(8)
+        user_agent_length = read_varint(stream)
+        user_agent = stream.read(user_agent_length)
+        latest_block = little_endian_to_int(stream.read(4))
+        relay = stream.read(1)
+        return cls(version, services, timestamp, receiver_services, receiver_ip, receiver_port,
+                   sender_services, sender_ip, sender_port, nonce, user_agent, latest_block, relay)
+
 
 # The verack message is sent in reply to version.
 # This message consists of only a message header with the command string "verack".
@@ -195,6 +214,7 @@ class PongMessage:
 
 class SimpleNode:
 
+    # port and host are the port and host we want to connect to.
     def __init__(self, host, port=None, testnet=False, logging=False):
         if port is None:
             if testnet:
@@ -234,16 +254,31 @@ class SimpleNode:
             print(f"receiving: {envelope}")
         return envelope
 
-    # lets us wait for any one of several commands (message classes) - page 183.
+    # lets us wait for any one of several messages (message classes) - page 183.
     # note: a commercial-strength would not use something like this.
     def wait_for(self, *message_classes):
         command = None
         command_to_class = {m.command: m for m in message_classes}
+        print(command_to_class)
+        # loop until the command is in the commands we want.
         while command not in command_to_class.keys():
+            # get the next network message.
             envelope = self.read()
+            # set the command to be evaluated.
             command = envelope.command
+            # we know how to respond to version and ping, handle that here.
             if command == VersionMessage.command:
                 self.send(VerAckMessage())
             elif command == PingMessage.command:
                 self.send(PongMessage(envelope.payload))
+        # return the envelope parsed as a member of the right message class.
         return command_to_class[command].parse(envelope.stream())
+
+    # The network handshake is how nodes establish communication - page 181.
+    # Handshake is sending a version message and getting a verack back.
+    def handshake(self):
+        # First step is to send a version message to the node we want to connect to.
+        version = VersionMessage()
+        self.send(version)
+        # The node we are connecting to receives the version message and responds with a verack message.
+        self.wait_for(VerAckMessage)
