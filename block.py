@@ -6,7 +6,8 @@ from helper import (
     read_varint,
     encode_varint,
     SIGHASH_ALL,
-    bits_to_target
+    bits_to_target,
+    merkle_root
 )
 
 GENESIS_BLOCK = bytes.fromhex(
@@ -18,13 +19,15 @@ LOWEST_BITS = bytes.fromhex('ffff001d')
 
 class Block:
 
-    def __init__(self, version, prev_block, merkle_root, timestamp, bits, nonce):
+    def __init__(self, version, prev_block, merkle_root, timestamp, bits, nonce, tx_hashes=None):
         self.version = version
         self.prev_block = prev_block
         self.merkle_root = merkle_root
         self.timestamp = timestamp
         self.bits = bits
         self.nonce = nonce
+        # The tx_hashes are used to calculate the merkle root - page 195.
+        self.tx_hashes = tx_hashes
 
     # receives a stream of bytes that represent a block and returns a Block object - page 166.
     @classmethod
@@ -97,3 +100,14 @@ class Block:
         proof = little_endian_to_int(h256)
         # if this value is smaller than the target, we have a valid proof of work.
         return proof < self.target()
+
+    # Returns whether the merkle root is valid for this block comparing the header merkle root
+    # with the merkle root calculated using the transaction hashes.
+    def validate_merkle_root(self):
+        # We have to reverse each tx hash to be able to validate it first.
+        hashes = [h[::-1] for h in self.tx_hashes]
+        # We calculate the merkle root using the transaction hashes.
+        # We need to reverse the result.
+        calculated_merkle = merkle_root(hashes)[::-1]
+        # Return the result of the comparison.
+        return self.merkle_root == calculated_merkle
