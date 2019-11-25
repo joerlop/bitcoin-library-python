@@ -189,3 +189,16 @@ def calculate_new_bits(previous_bits, time_differential):
 # Given two hashes, we produce another hash that represents both of them.
 def merkle_parent(hash_a, hash_b):
     return hash256(hash_a + hash_b)
+
+
+# Given an ordered list of hashes, returns a list with the parents of each pair.
+def merkle_parent_level(hashes):
+    # If list has an odd number of hashes, we duplicate the last one.
+    if (len(hashes) % 2 == 1):
+        hashes.append(hashes[-1])
+    parent_level = []
+    # We loop skipping by two each time.
+    for i in range(0, len(hashes), 2):
+        parent = merkle_parent(hashes[i], hashes[i+1])
+        parent_level.append(parent)
+    return parent_level
