@@ -7,6 +7,7 @@ from helper import (
     little_endian_to_int,
     merkle_parent,
     read_varint,
+    bytes_to_bit_field
 )
 
 
@@ -153,7 +154,7 @@ class MerkleTree:
 
 # The full node sends all the info. needed to verify an interesting transaction using a merkle block.
 # The first 6 fields are exactly the same as the block header. The last 3 fields (total, hashes, flags)
-# are the proof if inclusion.
+# are the proof of inclusion.
 class MerkleBlock:
 
     command = b'merkleblock'
@@ -189,3 +190,11 @@ class MerkleBlock:
         flags_length = read_varint(stream)
         flags = stream.read(flags_length)
         return cls(version, prev_block, merkle_root, timestamp, bits, nonce, total, hashes, flags)
+
+    # Returns whether merkle root is valid for proof of inclusion given.
+    def is_valid(self):
+        flag_bits = bytes_to_bit_field(self.flags)
+        hashes = [h[::-1] for h in self.hashes]
+        merkle_tree = MerkleTree(self.total)
+        merkle_tree.populate_tree(flag_bits, hashes)
+        return merkle_tree.root()[::-1] == self.merkle_root
