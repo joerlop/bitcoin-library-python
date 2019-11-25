@@ -6,6 +6,8 @@ BASE58_ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 SIGHASH_ALL = 1
 # represents the number of seconds in 2 weeks.
 TWO_WEEKS = 60 * 60 * 24 * 14
+MAX_TARGET = 0xffff * 256**(0x1d - 3)
+
 
 def run(test):
     suite = TestSuite()
@@ -19,14 +21,17 @@ def hash256(s):
     return hashlib.sha256(hashlib.sha256(s).digest()).digest()
 
 # helper function necessary for address creation - page 83
+
+
 def hash160(s):
     '''sha256 followed by ripemd160'''
     return hashlib.new('ripemd160', hashlib.sha256(s).digest()).digest()
 
+
 # receives a number s in bytes format and returns a string as its base58 encoded version
 def encode_base58(s):
     count = 0
-    for c in s: 
+    for c in s:
         if c == 0:
             count += 1
         else:
@@ -34,14 +39,16 @@ def encode_base58(s):
     num = int.from_bytes(s, 'big')
     prefix = '1' * count
     result = ''
-    while num > 0: 
+    while num > 0:
         num, mod = divmod(num, 58)
         result = BASE58_ALPHABET[mod] + result
-    return prefix + result 
+    return prefix + result
+
 
 # helper function necessary for address creation - page 83
 def encode_base58_checksum(b):
     return encode_base58(b + hash256(b)[:4])
+
 
 # Takes an address and returns its 20-byte hash version. Opposite of encode_base58 - Page 139.
 def decode_base58(s):
@@ -63,11 +70,14 @@ def decode_base58(s):
     # The middle 20 are the 20_byte hash (the hash160).
     return num_bytes[1:-4]
 
+
 def little_endian_to_int(num_bytes):
     return int.from_bytes(num_bytes, 'little')
 
+
 def int_to_little_endian(num, length):
     return num.to_bytes(length, 'little')
+
 
 # reads a varint (variable integer) from a stream - page 92
 def read_varint(stream):
@@ -86,6 +96,7 @@ def read_varint(stream):
     else:
         return i
 
+
 # converts (encodes) an integer to a varint. Opposite of read_varint - page 92
 def encode_varint(i):
     if i < 0xfd:
@@ -98,6 +109,7 @@ def encode_varint(i):
         return b'\xff' + int_to_little_endian(i, 8)
     else:
         raise RuntimeError('integer too large: {}'.format(i))
+
 
 # function that converts a 20-byte hash160 into a p2sh address.
 def h160_to_p2pkh_address(h160, testnet=False):
@@ -118,9 +130,10 @@ def h160_to_p2sh_address(h160, testnet=False):
     else:
         return encode_base58_checksum(b'\x05' + h160)
 
+
 # converts a block header's bits field into the target value - page 172.
 # the target is important because a valid proof-of-work is a hash of the block header that, when interpreted
-# as little endian int, is below the target. 
+# as little endian int, is below the target.
 def bits_to_target(bits):
     # last byte of bits field is the exponent.
     exponent = bits[-1]
@@ -129,6 +142,7 @@ def bits_to_target(bits):
     # we calculate the target as follows
     target = coefficient * 256**(exponent - 3)
     return target
+
 
 # receives a target int and returns the bits in bytes - page 175.
 def target_to_bits(target):
@@ -153,6 +167,7 @@ def target_to_bits(target):
     bits = coefficient[::-1] + bytes([exponent])
     return bits
 
+
 # returns new bits after a 2.016 block period - page 175.
 def calculate_new_bits(previous_bits, time_differential):
     # ensures max. increase in difficulty to be x4.
@@ -163,6 +178,9 @@ def calculate_new_bits(previous_bits, time_differential):
         time_differential = TWO_WEEKS // 4
     # calculate the new target based on time differential.
     new_target = bits_to_target(previous_bits) * time_differential // TWO_WEEKS
+    # if the new target is bigger than MAX_TARGET, set to MAX_TARGET
+    if new_target > MAX_TARGET:
+        new_target = MAX_TARGET
     # compute new bits based on new target.
     new_bits = target_to_bits(new_target)
     return new_bits
