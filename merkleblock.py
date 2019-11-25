@@ -98,6 +98,58 @@ class MerkleTree:
     def right_exists(self):
         return len(self.nodes[self.current_depth + 1]) > self.current_index * 2 + 1
 
+    # Find the merkle root given a flag bits list and a hashes list - page 209.
+    # For a detailed explanation on how flag bits work see page 207.
+    def populate_tree(self, flag_bits, hashes):
+        # Loop until the root is calculated.
+        while self.root() is None:
+            # For leaf nodes, we are always given the hash.
+            if self.is_leaf():
+                # We remove the flag bit corresponding to this node.
+                flag_bits.pop(0)
+                # The hash at index 0 is the hash for this node.
+                self.set_current_node(hashes.pop(0))
+                self.up()
+            else:
+                left_hash = self.get_left_node()
+                # If we don't have the left child value, there are 2 possibilities: 1) This node's value
+                # may be in the hashes list or we need to calculate it.
+                if left_hash is None:
+                    # The next flag bit tells us whether we need to calculate this node or it is given to us.
+                    # If the bit is a 0, it's hash is given to us. If it's a 1, we need to calculate it.
+                    if flag_bits.pop(0) == 0:
+                        self.set_current_node(hashes.pop(0))
+                        # Now that we have set the value, we can go up and start working on the other side
+                        # of the tree.
+                        self.up()
+                    # If the bit is not 0, we need to calculate this node's value, so we keep traversing to
+                    # the left.
+                    else:
+                        self.left()
+                # We check that the right node exists.
+                elif self.right_exists():
+                    right_hash = self.get_right_node()
+                    # We have the left hash, but not the right. We traverse to the right node to get its value.
+                    if right_hash is None:
+                        self.right()
+                    # We have both left and right hashes, so we calculate the parent to get the current node's value.
+                    else:
+                        self.set_current_node(
+                            merkle_parent(left_hash, right_hash))
+                        self.up()
+                # We have the left node's value, but the right node does not exist. Thus, we calculate
+                # the parent using the left node twice.
+                else:
+                    self.set_current_node(merkle_parent(left_hash, left_hash))
+                    self.up()
+        # All hashes must be consumed.
+        if len(hashes) != 0:
+            raise RuntimeError("Not all hashes were consumed.")
+        # All flag bits must be consumed.
+        for flag_bit in flag_bits:
+            if flag_bit != 0:
+                raise RuntimeError("All flag bits must be consumed.")
+
 
 # The full node sends all the info. needed to verify an interesting transaction using a merkle block.
 # The first 6 fields are exactly the same as the block header. The last 3 fields (total, hashes, flags)
