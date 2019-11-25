@@ -202,3 +202,11 @@ def merkle_parent_level(hashes):
         parent = merkle_parent(hashes[i], hashes[i+1])
         parent_level.append(parent)
     return parent_level
+
+
+# To get the merkle root, we calculate successive merkle parent levels until we get to a single hash.
+def merkle_root(hashes):
+    # We loop until there's only 1 hash left, the merkle root.
+    while len(hashes) > 1:
+        hashes = merkle_parent_level(hashes)
+    return hashes
