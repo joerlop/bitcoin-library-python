@@ -184,3 +184,8 @@ def calculate_new_bits(previous_bits, time_differential):
     # compute new bits based on new target.
     new_bits = target_to_bits(new_target)
     return new_bits
+
+
+# Given two hashes, we produce another hash that represents both of them.
+def merkle_parent(hash_a, hash_b):
+    return hash256(hash_a + hash_b)
