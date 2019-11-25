@@ -210,3 +210,13 @@ def merkle_root(hashes):
     while len(hashes) > 1:
         hashes = merkle_parent_level(hashes)
     return hashes
+
+
+# Used to parse the flags of a merkleblock - page 205.
+def bytes_to_bit_field(some_bytes):
+    flag_bits = []
+    for byte in some_bytes:
+        for _ in range(8):
+            flag_bits.append(byte & 1)
+            byte >>= 1
+    return flag_bits
