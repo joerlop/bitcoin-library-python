@@ -7,6 +7,8 @@ from helper import (
     murmur3,
 )
 
+from network import GenericMessage
+
 BIP37_CONSTANT = 0xfba4c795
 
 

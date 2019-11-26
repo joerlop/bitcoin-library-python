@@ -325,6 +325,29 @@ class GenericMessage:
         return self.payload
 
 
+# The getdata command is what communicates blocks and transactions. This is the message used to ask for
+# transactions, blocks, merkle blocks or compaact block - page 217.
+class GetDataMessage:
+
+    command = b'getdata'
+
+    def __init__(self):
+        self.data = []
+
+    def add_data(self, data_type, identifier):
+        # We add items we want to the message using this method. The data type indicates if it's a tx,
+        # block, filtered block or compact block. Each type has a unique value.
+        self.data.append((data_type, identifier))
+
+    # Returns the message payload - page 217.
+    def serialize(self):
+        payload = encode_varint(len(self.data))
+        for data_type, identifier in self.data:
+            payload += int_to_little_endian(data_type, 4)
+            payload += identifier[::-1]
+        return payload
+
+
 class SimpleNode:
 
     # port and host are the port and host we want to connect to.
