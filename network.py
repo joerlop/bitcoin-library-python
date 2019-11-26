@@ -149,6 +149,8 @@ class VersionMessage:
         # The last block received by the emitting node.
         self.latest_block = latest_block
         # Whether the remote peer should announce relayed transactions or not, see BIP 0037.
+        # If it's set to 0 it tells the full node not to send transaction messages unless they match
+        # a bloom filter or they have been specifically requested - page 216.
         self.relay = relay
 
     # returns the VersionMessage in bytes format.

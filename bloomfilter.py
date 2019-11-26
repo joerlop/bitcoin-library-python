@@ -21,3 +21,14 @@ class BloomFilter:
         self.function_count = function_count
         # A tweak to be able to change the bloom filter slightly if it hits too many items.
         self.tweak = tweak
+
+    # Given an item to be added to the bloom filter, sets the corresponding bits of the bit field to 1.
+    def add(self, item):
+        # We hash function_count number of times.
+        for i in range(self.function_count):
+            # This is the seed formula - page 215.
+            seed = i * BIP37_CONSTANT + self.tweak
+            # murmur3 returns a number, so we don't have to convert to an integer.
+            h = murmur3(item, seed=seed)
+            bit = h % self.bit_field
+            self.bit_field[bit] = 1
