@@ -6,6 +6,7 @@ from random import randint
 from unittest import TestCase
 
 from block import Block
+from tx import Tx
 from helper import (
     hash256,
     encode_varint,
@@ -401,6 +402,7 @@ class SimpleNode:
             envelope = self.read()
             # set the command to be evaluated.
             command = envelope.command
+            print('command in wf:', command)
             # we know how to respond to version and ping, handle that here.
             if command == VersionMessage.command:
                 self.send(VerAckMessage())

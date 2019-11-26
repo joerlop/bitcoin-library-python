@@ -32,7 +32,7 @@ class BloomFilter:
             seed = i * BIP37_CONSTANT + self.tweak
             # murmur3 returns a number, so we don't have to convert to an integer.
             h = murmur3(item, seed=seed)
-            bit = h % self.bit_field
+            bit = h % len(self.bit_field)
             self.bit_field[bit] = 1
 
     # Generates the payload to communicate the bloom filter to a full node
