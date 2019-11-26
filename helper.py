@@ -184,3 +184,39 @@ def calculate_new_bits(previous_bits, time_differential):
     # compute new bits based on new target.
     new_bits = target_to_bits(new_target)
     return new_bits
+
+
+# Given two hashes, we produce another hash that represents both of them.
+def merkle_parent(hash_a, hash_b):
+    return hash256(hash_a + hash_b)
+
+
+# Given an ordered list of hashes, returns a list with the parents of each pair.
+def merkle_parent_level(hashes):
+    # If list has an odd number of hashes, we duplicate the last one.
+    if (len(hashes) % 2 == 1):
+        hashes.append(hashes[-1])
+    parent_level = []
+    # We loop skipping by two each time.
+    for i in range(0, len(hashes), 2):
+        parent = merkle_parent(hashes[i], hashes[i+1])
+        parent_level.append(parent)
+    return parent_level
+
+
+# To get the merkle root, we calculate successive merkle parent levels until we get to a single hash.
+def merkle_root(hashes):
+    # We loop until there's only 1 hash left, the merkle root.
+    while len(hashes) > 1:
+        hashes = merkle_parent_level(hashes)
+    return hashes
+
+
+# Used to parse the flags of a merkleblock - page 205.
+def bytes_to_bit_field(some_bytes):
+    flag_bits = []
+    for byte in some_bytes:
+        for _ in range(8):
+            flag_bits.append(byte & 1)
+            byte >>= 1
+    return flag_bits
