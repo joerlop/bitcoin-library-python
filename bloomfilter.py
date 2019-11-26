@@ -32,3 +32,15 @@ class BloomFilter:
             h = murmur3(item, seed=seed)
             bit = h % self.bit_field
             self.bit_field[bit] = 1
+
+    # Generates the payload to communicate the bloom filter to a full node
+    # and returns a GenericMessage that includes it - page 217.
+    def filterload(self, flag=1):
+        payload = encode_varint(self.size)
+        payload += bit_field_to_bytes(self.bit_field)
+        payload += int_to_little_endian(self.function_count, 4)
+        payload += int_to_little_endian(self.tweak, 4)
+        # The matched item flag is used to tell the full node to add any matched transactions to the bloom filter.
+        payload += int_to_little_endian(flag, 1)
+        # filterload is the command used to set the bloom filter.
+        return GenericMessage(b'filterload', payload)

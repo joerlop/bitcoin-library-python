@@ -313,6 +313,18 @@ class HeadersMessage:
         return cls(blocks)
 
 
+# Class to create a GenericMessage object. The command and payload can be passed as arguments to create the
+# message.
+class GenericMessage:
+
+    def __init__(self, command, payload):
+        self.command = command
+        self.payload = payload
+
+    def serialize(self):
+        return self.payload
+
+
 class SimpleNode:
 
     # port and host are the port and host we want to connect to.
