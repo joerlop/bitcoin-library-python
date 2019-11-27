@@ -93,15 +93,16 @@ class Tx:
     def hash(self):
         return hash256(self.serialize())[::-1]
 
-    # method that defines which parse method to use: segwit or legacy
+    # method that defines which parse method to use: segwit or legacy - page 231.
     @classmethod
     def parse(cls, s, testnet=False):
         s.read(4)
-        # if, after version, we have a 0 byte, it means the transaction is segwit.
+        # if, after version (which is first 4 bytes), we have a 0 byte, it means the transaction is segwit.
         if s.read(1) == b'\x00':
             parse_method = cls.parse_segwit
         else:
             parse_method = cls.parse_legacy
+        # We put the stream back to the position where it was before examining the first 5 bytes.
         s.seek(-5, 1)
         return parse_method(s, testnet=testnet)
 
@@ -134,9 +135,12 @@ class Tx:
     @classmethod
     def parse_segwit(cls, s, testnet=False):
         version = little_endian_to_int(s.read(4))
-        marker = s.read(2)
-        if marker != b'\x00\x01':
-            raise RuntimeError('Not a segwit transaction {}'.format(marker))
+        # Marker and flag are 2 bytes after version - page 232.
+        marker_and_flag = s.read(2)
+        # For transaction to be segwit, marker and flag need to be b'\x00\x01'.
+        if marker_and_flag != b'\x00\x01':
+            raise RuntimeError(
+                'Not a segwit transaction {}'.format(marker_and_flag))
         num_inputs = read_varint(s)
         inputs = []
         for _ in range(num_inputs):
@@ -145,6 +149,9 @@ class Tx:
         outputs = []
         for _ in range(num_outputs):
             outputs.append(TxOut.parse(s))
+        # This field corresponds to the witness, which contains items for each input.
+        # The witness field in p2wpkh has the signature and pubkey as its 2 elements - this for each input.
+        # Those 2 fields are used by upgraded nodes to validate the inputs.
         for tx_in in inputs:
             num_items = read_varint(s)
             items = []
@@ -153,14 +160,23 @@ class Tx:
                 if item_len == 0:
                     items.append(0)
                 else:
+                    # We add each element to the items list.
                     items.append(s.read(item_len))
+            # This TxIn witness is the list of items.
             tx_in.witness = items
         locktime = little_endian_to_int(s.read(4))
         return cls(version, inputs, outputs, locktime,
                    testnet=testnet, segwit=True)
 
-    # returns the bytes serialization of the transaction
+    # Decides whether to serialize using serialize_legacy or serialize_segwit.
     def serialize(self):
+        if self.segwit:
+            return self.serialize_segwit()
+        else:
+            return self.serialize_legacy()
+
+    # returns the bytes serialization of the transaction
+    def serialize_legacy(self):
         # version is 4 bytes, LE
         version = int_to_little_endian(self.version, 4)
         # number of inputs is a varint
@@ -181,6 +197,27 @@ class Tx:
         locktime = int_to_little_endian(self.locktime, 4)
         # return the concatenation of all the needed fields
         return version + num_inputs + inputs + num_outputs + outputs + locktime
+
+    def serialize_segwit(self):
+        result = int_to_little_endian(self.version, 4)
+        # We add the segwit marker and the flag.
+        result += b'\x00\x01'
+        result += encode_varint(len(self.tx_inputs))
+        for tx_in in self.tx_inputs:
+            result += tx_in.serialize()
+        result += encode_varint(len(self.tx_outputs))
+        for tx_out in self.tx_outputs:
+            result += tx_out.serialize()
+        # We serialize the witness.
+        for tx_in in self.tx_inputs:
+            result += int_to_little_endian(len(tx_in.witness), 1)
+            for item in tx_in.witness:
+                if type(item) == int:
+                    result += int_to_little_endian(item, 1)
+                else:
+                    result += encode_varint(len(item)) + item
+        result += int_to_little_endian(self.locktime, 4)
+        return result
 
     # returns the implied fee of the transaction in satoshis.
     def fee(self):
