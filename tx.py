@@ -1,6 +1,6 @@
 from io import BytesIO
 from unittest import TestCase
-from script import Script
+from script import Script, p2pkh_script
 
 import json
 import requests
@@ -72,9 +72,9 @@ class Tx:
         self.locktime = locktime
         self.testnet = testnet
         self.segwit = segwit
-        self.hash_prevouts = None
-        self.hash_sequence = None
-        self.hash_outputs = None
+        self._hash_prevouts = None
+        self._hash_sequence = None
+        self._hash_outputs = None
 
     def __repr__(self):
         tx_inputs = ''
@@ -89,7 +89,7 @@ class Tx:
     def id(self):
         return self.hash().hex()
 
-    # binary hash of the serialization in little endian
+    # binary hash of the legacy serialization in little endian.
     def hash(self):
         return hash256(self.serialize())[::-1]
 
@@ -268,6 +268,57 @@ class Tx:
         # convert the result to an integer using int.from_bytes(x, 'big')
         return int.from_bytes(h256, 'big')
 
+    def sig_hash_bip143(self, input_index, redeem_script=None, witness_script=None):
+        '''Returns the integer representation of the hash that needs to get
+        signed for index input_index'''
+        tx_in = self.tx_inputs[input_index]
+        # per BIP143 spec
+        s = int_to_little_endian(self.version, 4)
+        s += self.hash_prevouts() + self.hash_sequence()
+        s += tx_in.prev_tx[::-1] + int_to_little_endian(tx_in.prev_index, 4)
+        if witness_script:
+            script_code = witness_script.serialize()
+        elif redeem_script:
+            script_code = p2pkh_script(redeem_script.cmds[1]).serialize()
+        else:
+            script_code = p2pkh_script(tx_in.script_pubkey(
+                self.testnet).cmds[1]).serialize()
+        s += script_code
+        s += int_to_little_endian(tx_in.value(), 8)
+        s += int_to_little_endian(tx_in.sequence, 4)
+        s += self.hash_outputs()
+        s += int_to_little_endian(self.locktime, 4)
+        s += int_to_little_endian(SIGHASH_ALL, 4)
+        return int.from_bytes(hash256(s), 'big')
+
+    # Method necessary for calculating z per BIP143 spec - method used in sig_hash_bip143()
+    def hash_prevouts(self):
+        if self._hash_prevouts is None:
+            all_prevouts = b''
+            all_sequence = b''
+            for tx_in in self.tx_inputs:
+                all_prevouts += tx_in.prev_tx[::-1] + \
+                    int_to_little_endian(tx_in.prev_index, 4)
+                all_sequence += int_to_little_endian(tx_in.sequence, 4)
+            self._hash_prevouts = hash256(all_prevouts)
+            self._hash_sequence = hash256(all_sequence)
+        return self._hash_prevouts
+
+    # Method necessary for calculating z per BIP143 spec - method used in sig_hash_bip143()
+    def hash_sequence(self):
+        if self._hash_sequence is None:
+            self.hash_prevouts()  # this should calculate self._hash_prevouts
+        return self._hash_sequence
+
+    # Method necessary for calculating z per BIP143 spec - method used in sig_hash_bip143()
+    def hash_outputs(self):
+        if self._hash_outputs is None:
+            all_outputs = b''
+            for tx_out in self.tx_outputs:
+                all_outputs += tx_out.serialize()
+            self._hash_outputs = hash256(all_outputs)
+        return self._hash_outputs
+
     # Returns whether the input at the given index (in self.tx_inputs array) has a valid signature.
     def verify_input(self, input_index):
         # get the wanted input.
@@ -277,17 +328,31 @@ class Tx:
             # If it is, we know the last cmd of the ScriptSig is the RedeemScript - page 151
             cmd = tx_in.script_sig.cmds[-1]
             # Now we parse it.
-            # prepend length as varint to be able to parse it.
-            raw_redeem = encode_varint(len(cmd)) + cmd
+            # Parse the redeem script.
+            raw_redeem = int_to_little_endian(len(cmd), 1) + cmd
             redeem_script = Script.parse(BytesIO(raw_redeem))
+            # If the RedeemScript follows the p2wpkh special rule, which means the script is OP_0 followed by <20-byte hash>
+            # This if handles the p2sh-p2wpkh case, as it's inside the p2sh if.
+            if redeem_script.is_p2wpkh_script_pubkey():
+                # The segwit transaction signature hash calculation is specified in BIP0143 - page 233.
+                z = self.sig_hash_bip143(input_index, redeem_script)
+                witness = tx_in.witness
+            else:
+                z = self.sig_hash(input_index, redeem_script)
+                witness = None
         else:
-            redeem_script = None
-        # compute the signature hash for input.
-        z = self.sig_hash(input_index, redeem_script)
+            # This if handles the p2wpkh case.
+            if tx_in.script_pubkey(self.testnet).is_p2wpkh_script_pubkey():
+                z = self.sig_hash_bip143(input_index)
+                witness = tx_in.witness
+            else:
+                # compute the signature hash for input.
+                z = self.sig_hash(input_index)
+                witness = None
         # combine scripts.
         combined_script = tx_in.script_sig + tx_in.script_pubkey(self.testnet)
         # evaluate them.
-        return combined_script.evaluate(z)
+        return combined_script.evaluate(z, witness=witness)
 
     # Returns whether this transaction is valid. page 135.
     def verify(self):
