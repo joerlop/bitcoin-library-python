@@ -337,6 +337,14 @@ class Tx:
                 # The segwit transaction signature hash calculation is specified in BIP0143 - page 233.
                 z = self.sig_hash_bip143(input_index, redeem_script)
                 witness = tx_in.witness
+            # This elif takes care of p2sh-p2wsh.
+            elif redeem_script.is_p2wsh_script_pubkey():
+                command = tx_in.witness[-1]
+                raw_witness = encode_varint(len(command)) + command
+                witness_script = Script.parse(BytesIO(raw_witness))
+                z = self.sig_hash_bip143(
+                    input_index, witness_script=witness_script)
+                witness = tx_in.witness
             else:
                 z = self.sig_hash(input_index, redeem_script)
                 witness = None
@@ -344,6 +352,14 @@ class Tx:
             # This if handles the p2wpkh case.
             if tx_in.script_pubkey(self.testnet).is_p2wpkh_script_pubkey():
                 z = self.sig_hash_bip143(input_index)
+                witness = tx_in.witness
+            # This elif handles the p2wsh case.
+            elif tx_in.script_pubkey(self.testnet).is_p2wsh_script_pubkey():
+                command = tx_in.witness[-1]
+                raw_witness = encode_varint(len(command)) + command
+                witness_script = Script.parse(BytesIO(raw_witness))
+                z = self.sig_hash_bip143(
+                    input_index, witness_script=witness_script)
                 witness = tx_in.witness
             else:
                 # compute the signature hash for input.
