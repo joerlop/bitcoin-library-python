@@ -72,6 +72,9 @@ class Tx:
         self.locktime = locktime
         self.testnet = testnet
         self.segwit = segwit
+        self.hash_prevouts = None
+        self.hash_sequence = None
+        self.hash_outputs = None
 
     def __repr__(self):
         tx_inputs = ''
