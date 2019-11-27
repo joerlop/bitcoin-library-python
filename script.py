@@ -7,6 +7,8 @@ from helper import (
     int_to_little_endian,
     little_endian_to_int,
     read_varint,
+    h160_to_p2pkh_address,
+    h160_to_p2sh_address
 )
 
 from op import (
@@ -19,9 +21,11 @@ from op import (
 
 LOGGER = getLogger(__name__)
 
+
 # Takes the 20-byte hash160 part of the address and returns a p2pkh ScriptPubKey - page 140.
 def p2pkh_script(h160):
     return Script([0x76, 0xa9, h160, 0x88, 0xac])
+
 
 # the Script object represents the command set that requires evaluation.
 class Script:
@@ -32,7 +36,7 @@ class Script:
         else:
             # each command is either an opcode to be executed or an element to be pushed onto the stack.
             self.cmds = cmds
-    
+
     # takes a bytes stream and returns a Script object.
     @classmethod
     def parse(cls, s):
@@ -72,15 +76,16 @@ class Script:
                 op_code = current_byte_as_int
                 cmds.append(op_code)
         # script should have consumed exactly the number of bytes expected. If not we raise an error.
+        print("count, length", count, length)
         if count != length:
             raise SyntaxError('Parsing script failed.')
         return cls(cmds)
-    
+
     # returns the serialization of the Script object.
     def raw_serialize(self):
         result = b''
         for cmd in self.cmds:
-            # if it's an integer, we know it's an opcode because of the parse method. 
+            # if it's an integer, we know it's an opcode because of the parse method.
             # Elements are pushed onto the stack as bytes.
             if type(cmd) == int:
                 result += int_to_little_endian(cmd, 1)
@@ -92,7 +97,7 @@ class Script:
                     result += int_to_little_endian(length, 1)
                 # for any element with length between 76 and 255, we put a OP_PUSHDATA1 first,
                 # then encode the length as a single byte, followed by the element.
-                elif length > 75 and length < 256:                    
+                elif length > 75 and length < 256:
                     result += int_to_little_endian(76, 1)
                     result += int_to_little_endian(length, 1)
                 # for any element with length between 256 and 520, we put a OP_PUSHDATA2 first,
@@ -105,18 +110,18 @@ class Script:
                 # we encode the cmd
                 result += cmd
         return result
-    
+
     # adds the length of the entire script to the beginning of the serialization as a varint.
     def serialize(self):
         result = self.raw_serialize()
         length = len(result)
         return encode_varint(length) + result
-    
+
     # to evaluate a script, we need to combine the ScriptPubKey (lockbox) and ScriptSig fields (unlocking password).
     # to evaluate the 2 together, we take the commands from the ScriptSig and ScriptPubKey and combine them.
     def __add__(self, other):
         return Script(self.cmds + other.cmds)
-    
+
     # z is the signature (scriptsig)
     def evaluate(self, z, version=None, locktime=None, sequence=None):
         # get a copy of the commands array.
@@ -130,7 +135,7 @@ class Script:
             if type(cmd) == int:
                 # get the function that executes the opcode from the OP_CODE_FUNCTIONS array.
                 operation = OP_CODE_FUNCTIONS[cmd]
-                # 99 and 100 are OP_IF and OP_NOTIF. They require manipulations of the cmds array based on 
+                # 99 and 100 are OP_IF and OP_NOTIF. They require manipulations of the cmds array based on
                 # the top element of the stack.
                 if cmd in (99, 100):
                     # if executing the opcode returns False (fails)
@@ -215,6 +220,26 @@ class Script:
     def is_p2sh_script_pubkey(self):
         # there should be exactly 3 cmds
         # OP_HASH160 (0xa9), 20-byte hash, OP_EQUAL (0x87)
-        return len(self.cmds) == 3 and self.cmds[0] == 0xa9 \
-            and type(self.cmds[1]) == bytes and len(self.cmds[1]) == 20 \
-            and self.cmds[2] == 0x87
+        return len(self.cmds) == 3 and self.cmds[0] == 0xa9 and type(self.cmds[1]) == bytes and len(self.cmds[1]) == 20 and self.cmds[2] == 0x87
+
+    def is_p2pkh_script_pubkey(self):
+        '''Returns whether this follows the
+        OP_DUP OP_HASH160 <20 byte hash> OP_EQUALVERIFY OP_CHECKSIG pattern.'''
+        # there should be exactly 5 cmds
+        # OP_DUP (0x76), OP_HASH160 (0xa9), 20-byte hash, OP_EQUALVERIFY (0x88),
+        # OP_CHECKSIG (0xac)
+        return len(self.cmds) == 5 and self.cmds[0] == 0x76 and self.cmds[1] == 0xa9 and type(self.cmds[2]) == bytes and len(self.cmds[2]) == 20 and self.cmds[3] == 0x88 and self.cmds[4] == 0xac
+
+    # Returns the address corresponding to the script
+    def address(self, testnet=False):
+        if self.is_p2pkh_script_pubkey():  # p2pkh
+            # hash160 is the 3rd cmd
+            h160 = self.cmds[2]
+            # convert to p2pkh address using h160_to_p2pkh_address (remember testnet)
+            return h160_to_p2pkh_address(h160, testnet)
+        elif self.is_p2sh_script_pubkey():  # p2sh
+            # hash160 is the 2nd cmd
+            h160 = self.cmds[1]
+            # convert to p2sh address using h160_to_p2sh_address (remember testnet)
+            return h160_to_p2sh_address(h160, testnet)
+        raise ValueError('Unknown ScriptPubKey')

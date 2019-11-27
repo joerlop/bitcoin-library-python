@@ -6,6 +6,7 @@ from random import randint
 from unittest import TestCase
 
 from block import Block
+from tx import Tx
 from helper import (
     hash256,
     encode_varint,
@@ -149,6 +150,8 @@ class VersionMessage:
         # The last block received by the emitting node.
         self.latest_block = latest_block
         # Whether the remote peer should announce relayed transactions or not, see BIP 0037.
+        # If it's set to 0 it tells the full node not to send transaction messages unless they match
+        # a bloom filter or they have been specifically requested - page 216.
         self.relay = relay
 
     # returns the VersionMessage in bytes format.
@@ -311,6 +314,41 @@ class HeadersMessage:
         return cls(blocks)
 
 
+# Class to create a GenericMessage object. The command and payload can be passed as arguments to create the
+# message.
+class GenericMessage:
+
+    def __init__(self, command, payload):
+        self.command = command
+        self.payload = payload
+
+    def serialize(self):
+        return self.payload
+
+
+# The getdata command is what communicates blocks and transactions. This is the message used to ask for
+# transactions, blocks, merkle blocks or compaact block - page 217.
+class GetDataMessage:
+
+    command = b'getdata'
+
+    def __init__(self):
+        self.data = []
+
+    def add_data(self, data_type, identifier):
+        # We add items we want to the message using this method. The data type indicates if it's a tx,
+        # block, filtered block or compact block. Each type has a unique value.
+        self.data.append((data_type, identifier))
+
+    # Returns the message payload - page 217.
+    def serialize(self):
+        payload = encode_varint(len(self.data))
+        for data_type, identifier in self.data:
+            payload += int_to_little_endian(data_type, 4)
+            payload += identifier[::-1]
+        return payload
+
+
 class SimpleNode:
 
     # port and host are the port and host we want to connect to.
@@ -364,6 +402,7 @@ class SimpleNode:
             envelope = self.read()
             # set the command to be evaluated.
             command = envelope.command
+            print('command in wf:', command)
             # we know how to respond to version and ping, handle that here.
             if command == VersionMessage.command:
                 self.send(VerAckMessage())
