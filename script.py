@@ -1,6 +1,7 @@
 from io import BytesIO
 from logging import getLogger
 from unittest import TestCase
+import hashlib
 
 from helper import (
     encode_varint,
@@ -8,7 +9,8 @@ from helper import (
     little_endian_to_int,
     read_varint,
     h160_to_p2pkh_address,
-    h160_to_p2sh_address
+    h160_to_p2sh_address,
+    sha256
 )
 
 from op import (
@@ -25,6 +27,16 @@ LOGGER = getLogger(__name__)
 # Takes the 20-byte hash160 part of the address and returns a p2pkh ScriptPubKey - page 140.
 def p2pkh_script(h160):
     return Script([0x76, 0xa9, h160, 0x88, 0xac])
+
+
+# Takes the 20-byte hash160 part of the address and returns a p2wpkh ScriptPubKey - page 234.
+def p2wpkh_script(h160):
+    return Script([0x00, h160])
+
+
+# Takes a hash and returns the p2wsh ScriptPubKey.
+def p2wsh_script(h256):
+    return Script([0x00, h256])
 
 
 # the Script object represents the command set that requires evaluation.
@@ -123,7 +135,7 @@ class Script:
         return Script(self.cmds + other.cmds)
 
     # z is the signature (scriptsig)
-    def evaluate(self, z, version=None, locktime=None, sequence=None):
+    def evaluate(self, z, witness, version=None, locktime=None, sequence=None):
         # get a copy of the commands array.
         cmds = self.cmds.copy()
         stack = []
@@ -176,6 +188,30 @@ class Script:
             # if cmd is not an opcode, it's an element. We push it to the stack.
             else:
                 stack.append(cmd)
+                # We check if the commands follow the p2wsh special rule.
+                if len(stack) == 2 and stack[0] == b'' and len(stack[1]) == 32:
+                    # The top element is the sha256 hash of the WitnessScript.
+                    s256 = stack.pop()
+                    # The second element is the witness version.
+                    stack.pop()
+                    # Everything but the WitnessScript is added to the command set.
+                    cmds.extend(witness[:-1])
+                    witness_script = witness[-1]
+                    s256_calculated = sha256(witness_script)
+                    if s256 != s256_calculated:
+                        print(
+                            f"Bad sha256 {s256.hex()} vs. {s256_calculated.hex()}")
+                        return False
+                    stream = BytesIO(encode_varint(
+                        len(witness_script)) + witness_script)
+                    witness_script_cmds = Script.parse(stream).cmds
+                    cmds.extend(witness_script_cmds)
+                # We check if the commands follow the p2wpkh special rule - page 235.
+                if len(stack) == 2 and stack[0] == b'' and len(stack[1]) == 20:
+                    h160 = stack.pop()
+                    stack.pop()
+                    cmds.extend(witness)
+                    cmds.extend(p2pkh_script(h160).cmds)
                 # we check if next commands form the pattern that executes the special p2sh rule - page 152 and 156.
                 # if that is the case, the last cmd appended would be the RedeemScript, which is an element.
                 # That's why we check for the next 3 commands only.
@@ -229,6 +265,14 @@ class Script:
         # OP_DUP (0x76), OP_HASH160 (0xa9), 20-byte hash, OP_EQUALVERIFY (0x88),
         # OP_CHECKSIG (0xac)
         return len(self.cmds) == 5 and self.cmds[0] == 0x76 and self.cmds[1] == 0xa9 and type(self.cmds[2]) == bytes and len(self.cmds[2]) == 20 and self.cmds[3] == 0x88 and self.cmds[4] == 0xac
+
+    # Returns whether this script follows the p2wpkh script: OP_0, <20-byte hash> - page 225.
+    def is_p2wpkh_script_pubkey(self):
+        return len(self.cmds) == 2 and self.cmds[0] == 0x00 and type(self.cmds[1]) == bytes and len(self.cmds[1]) == 20
+
+    # Returns whether this script follows the p2wsh script: OP_0, <32-byte hash> - page 236.
+    def is_p2wsh_script_pubkey(self):
+        return len(self.cmds) == 2 and self.cmds[0] == 0x00 and type(self.cmds[1]) == bytes and len(self.cmds[1]) == 32
 
     # Returns the address corresponding to the script
     def address(self, testnet=False):

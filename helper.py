@@ -20,12 +20,15 @@ def hash256(s):
     # sha256 returns a SHA-256 hash object. The digest serializes it to byte format (bytes object).
     return hashlib.sha256(hashlib.sha256(s).digest()).digest()
 
+
 # helper function necessary for address creation - page 83
-
-
 def hash160(s):
     '''sha256 followed by ripemd160'''
     return hashlib.new('ripemd160', hashlib.sha256(s).digest()).digest()
+
+
+def sha256(s):
+    return hashlib.sha256(s).digest()
 
 
 # receives a number s in bytes format and returns a string as its base58 encoded version
