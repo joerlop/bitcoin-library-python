@@ -216,12 +216,11 @@ Getting Transactions of Interest from a full node - page 218.
 #         if received_tx.id() == transaction.id():
 #             print('Yeah!')
 
-node = SimpleNode('54.188.160.243')
+node = SimpleNode('85.204.96.207')
 node.handshake()
 getdata = GetDataMessage()
 getdata.add_data(
-    BLOCK_DATA_TYPE, bytes.fromhex('00000000000000000012c29be7f63728fd241f373bb85fd3e61507dc3d4b7c6b'))
+    BLOCK_DATA_TYPE, bytes.fromhex('0000000000000000000a7afc76697e907788734a851ef5d0d1af623299016554'))
 node.send(getdata)
 received_block = node.wait_for(BlockMessage)
-parsed_block_message = BlockMessage.parse(received_block)
-print(parsed_block_message.txn_count)
+print('txn count 2', received_block.txn_count)

@@ -437,8 +437,14 @@ class TxIn:
         prev_tx = stream.read(32)[::-1]
         # prev_index is 4 bytes, little endian, interpreted as integer.
         prev_index = little_endian_to_int(stream.read(4))
-        # TODO:
-        script_sig = Script.parse(stream)
+        # Check if it's a coinbase transaction.
+        if prev_tx == b'\x00' * 32 and prev_index == 0xffffffff:
+            print("Coinbase")
+            # If it is, we know that the ScriptSig is prepended by the block height to prevent same Tx IDs
+            # for different transactions.
+            script_sig = Script.parse(stream, coinbase=True)
+        else:
+            script_sig = Script.parse(stream, coinbase=False)
         # sequence is 4 bytes, little endian, interpreted as integer.
         sequence = little_endian_to_int(stream.read(4))
         # returns an object of the same class.
