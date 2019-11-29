@@ -109,6 +109,7 @@ class Tx:
     # receives a stream of bytes and returns a Tx object
     @classmethod
     def parse_legacy(cls, stream, testnet=False):
+        print("Normal")
         # s.read(n) will return n bytes
         # version has 4 bytes, little-endian, interpret as int
         version = little_endian_to_int(stream.read(4))
@@ -134,6 +135,7 @@ class Tx:
     # Parser when tx is segwit.
     @classmethod
     def parse_segwit(cls, s, testnet=False):
+        print("Segwit")
         version = little_endian_to_int(s.read(4))
         # Marker and flag are 2 bytes after version - page 232.
         marker_and_flag = s.read(2)

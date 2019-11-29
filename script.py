@@ -143,6 +143,7 @@ class Script:
         # execute until commands array is empty.
         while len(cmds) > 0:
             cmd = cmds.pop(0)
+            print("cmd", cmd)
             # if command is an opcode.
             if type(cmd) == int:
                 # get the function that executes the opcode from the OP_CODE_FUNCTIONS array.

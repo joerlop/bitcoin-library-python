@@ -349,6 +349,36 @@ class GetDataMessage:
         return payload
 
 
+class BlockMessage:
+
+    command = b'block'
+
+    def __init__(self, version, prev_block, merkle_root, timestamp, bits, nonce, txn_count, txns):
+        self.version = version
+        self.prev_block = prev_block
+        self.merkle_root = merkle_root
+        self.timestamp = timestamp
+        self.bits = bits
+        self.nonce = nonce
+        self.txn_count = txn_count
+        self.txns = txns
+
+    @classmethod
+    def parse(cls, stream):
+        version = little_endian_to_int(stream.read(4))
+        prev_block = stream.read(32)[::-1]
+        merkle_root = stream.read(32)[::-1]
+        timestamp = little_endian_to_int(stream.read(4))
+        bits = stream.read(4)
+        nonce = stream.read(4)
+        txn_count = read_varint(stream)
+        txns = []
+        for _ in range(txn_count):
+            txns.append(Tx.parse(stream))
+            print('Parsed')
+        return cls(version, prev_block, merkle_root, timestamp, bits, nonce, txn_count, txns)
+
+
 class SimpleNode:
 
     # port and host are the port and host we want to connect to.
@@ -400,9 +430,10 @@ class SimpleNode:
         while command not in command_to_class.keys():
             # get the next network message.
             envelope = self.read()
+            print('envelope', envelope)
             # set the command to be evaluated.
             command = envelope.command
-            print('command in wf:', command)
+            print('command', command)
             # we know how to respond to version and ping, handle that here.
             if command == VersionMessage.command:
                 self.send(VerAckMessage())
