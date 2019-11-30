@@ -51,14 +51,9 @@ class Script:
 
     # takes a bytes stream and returns a Script object.
     @classmethod
-    def parse(cls, s, coinbase=False):
+    def parse(cls, s):
         # script serialization always starts with the length of the script.
         length = read_varint(s)
-        # If this script corresponds to the ScriptSig of a coinbase transaction, the first byte is the
-        # length of the block height in bytes and the next bytes correspond to the block height.
-        if coinbase:
-            block_height_length = s.read(1)[0]
-            block_height = s.read(block_height_length)
         cmds = []
         count = 0
         # parse until whole script has been parsed.
@@ -68,6 +63,7 @@ class Script:
             count += 1
             # this converts the current byte into an int.
             current_byte_as_int = current[0]
+            print('curr byte', current_byte_as_int)
             # for a number between 1 and 75, we know the next n bytes are an element.
             if current_byte_as_int >= 1 and current_byte_as_int <= 75:
                 n = current_byte_as_int
