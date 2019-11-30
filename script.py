@@ -63,6 +63,7 @@ class Script:
             count += 1
             # this converts the current byte into an int.
             current_byte_as_int = current[0]
+            print('curr byte', current_byte_as_int)
             # for a number between 1 and 75, we know the next n bytes are an element.
             if current_byte_as_int >= 1 and current_byte_as_int <= 75:
                 n = current_byte_as_int

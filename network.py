@@ -373,6 +373,7 @@ class BlockMessage:
         nonce = stream.read(4)
         txn_count = read_varint(stream)
         txns = []
+        print('count', txn_count)
         for _ in range(txn_count):
             txns.append(Tx.parse(stream))
             print('Parsed')

@@ -437,8 +437,8 @@ class TxIn:
         prev_tx = stream.read(32)[::-1]
         # prev_index is 4 bytes, little endian, interpreted as integer.
         prev_index = little_endian_to_int(stream.read(4))
-        # TODO:
         script_sig = Script.parse(stream)
+        print('ss', script_sig.serialize().hex())
         # sequence is 4 bytes, little endian, interpreted as integer.
         sequence = little_endian_to_int(stream.read(4))
         # returns an object of the same class.
