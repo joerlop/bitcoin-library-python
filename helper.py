@@ -1,6 +1,7 @@
 from unittest import TestSuite, TextTestRunner
 
 import hashlib
+import bech32
 
 BASE58_ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 SIGHASH_ALL = 1
@@ -132,6 +133,14 @@ def h160_to_p2sh_address(h160, testnet=False):
         return encode_base58_checksum(b'\xc4' + h160)
     else:
         return encode_base58_checksum(b'\x05' + h160)
+
+
+def script_to_bech32(witprog: bytes, witver: int, testnet=False) -> str:
+    """https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki#witness-program"""
+    if testnet:
+        return bech32.encode('tb', witver, witprog)
+    else:
+        return bech32.encode('bc', witver, witprog)
 
 
 # converts a block header's bits field into the target value - page 172.
